@@ -1,0 +1,7 @@
+[package]
+name = "vis-rs"
+version = "0.1.0"
+authors = ["Bjørnar Luteberget <luteberget@gmail.com>"]
+
+[dependencies]
+z3 = "*"
