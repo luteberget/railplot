@@ -13,6 +13,9 @@ pub enum NodeShape {
     Switch {
         side: Side,
         dir :Dir,
+        left :EdgeRef,
+        right :EdgeRef,
+        trunk :EdgeRef,
     }
 }
 
@@ -68,10 +71,115 @@ struct NodeRepr<'ctx> {
 // Solver-internal representation of edge
 struct EdgeRepr<'ctx> {
     y         : z3::Ast<'ctx>,
+    // TODO only y is really needed? 
+    //       dy1dy2 are only definitions used in the for-loop over edges
+    //       shortup,shortdown are variables, but only used in the for-loop over edges
+    //       however, y needs to be stored to index from the less_than relation.
     dy1       : z3::Ast<'ctx>,
     dy2       : z3::Ast<'ctx>,
     shortup   : z3::Ast<'ctx>,
     shortdown : z3::Ast<'ctx>,
+}
+
+type EdgePair = (EdgeRef, EdgeRef);
+fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
+    use std::collections::HashSet;
+    use std::collections::BinaryHeap;
+    let mut lt : HashSet<(EdgeRef,EdgeRef)> = HashSet::new();
+
+    let lr = |n:NodeRef,dir| {
+        // BinaryHeap is max-heap, so negate for increasing  and unit for decreasing mileage
+        let dirfactor = match dir { Dir::Outgoing => -1, Dir::Incoming => 1 };
+
+        let top_edge = |n:NodeRef| match (dir,&nodes[n].shape) {
+            (Dir::Outgoing, NodeShape::Switch { dir: Dir::Outgoing, left, .. }) => left,
+            (Dir::Incoming, NodeShape::Switch { dir: Dir::Incoming, right, .. }) => right,
+            _ => panic!(),
+        };
+
+        let bottom_edge = |n:NodeRef| match (dir, &nodes[n].shape) {
+            (Dir::Outgoing, NodeShape::Switch { dir: Dir::Outgoing, right, .. }) => right,
+            (Dir::Incoming, NodeShape::Switch { dir: Dir::Incoming, left, .. }) => left,
+            _ => panic!(),
+        };
+
+        let edge_node = |e:EdgeRef| match dir {
+            Dir::Outgoing => edges[e].b.node,
+            Dir::Incoming => edges[e].a.node,
+        };
+
+        let next_edges = |n:NodeRef| match (dir, &nodes[n].shape) {
+            // TODO get rid of allocation with smallvec? probably not worth much.
+            (Dir::Outgoing, NodeShape::End(_)) => vec![],
+            (Dir::Outgoing, NodeShape::Switch { dir: Dir::Outgoing, left, right, .. }) => vec![left, right],
+            (Dir::Outgoing, NodeShape::Switch { dir: Dir::Incoming, trunk, .. }) => vec![trunk],
+            (Dir::Incoming, NodeShape::Begin(_)) => vec![],
+            (Dir::Incoming, NodeShape::Switch { dir: Dir::Incoming, left, right, .. }) => vec![left, right],
+            (Dir::Incoming, NodeShape::Switch { dir: Dir::Outgoing, trunk, .. }) => vec![trunk],
+             _ => panic!(),
+        };
+
+        let mut over_edges = HashSet::new();
+        let mut over_nodes = vec![edge_node(*top_edge(n))].into_iter().collect::<HashSet<usize>>();
+        let mut over_queue :BinaryHeap<(isize,usize)> = BinaryHeap::new();
+        over_queue.push((dirfactor*edge_node(*top_edge(n)) as isize, *top_edge(n)));
+
+        let mut under_edges = HashSet::new();
+        let mut under_nodes = vec![edge_node(*bottom_edge(n))].into_iter().collect::<HashSet<usize>>();
+        let mut under_queue :BinaryHeap<(isize,usize)>  = BinaryHeap::new();
+        under_queue.push((dirfactor*edge_node(*bottom_edge(n)) as isize, *bottom_edge(n)));
+
+        loop {
+            match (over_queue.peek().cloned(), under_queue.peek().cloned()) {
+                (Some((over_priority,_)), Some((under_priority,_))) => {
+                    if over_priority > under_priority {
+                        let (_,edge) = over_queue.pop().unwrap();
+                        over_edges.insert(edge);
+                        for edge_i in next_edges(edge_node(edge)) {
+                            over_nodes.insert(edge_node(*edge_i));
+                            over_queue.push((dirfactor*edge_node(*edge_i) as isize, *edge_i));
+                        }
+                    } else {
+                        let (_,edge) = under_queue.pop().unwrap();
+                        under_edges.insert(edge);
+                        for edge_i in next_edges(edge_node(edge)) {
+                            over_nodes.insert(edge_node(*edge_i));
+                            over_queue.push((dirfactor*edge_node(*edge_i) as isize, *edge_i));
+                        }
+                    }
+
+                    // If the over and under paths have joined, we are done
+                    if !over_nodes.intersection(&under_nodes).next().is_some() {
+                        break;
+                    }
+                }
+                _ => break
+            }
+        }
+
+        // left over edges in the queue are also included
+        over_edges.extend(over_queue.into_iter().map(|(_,e)| e));
+        under_edges.extend(under_queue.into_iter().map(|(_,e)| e));
+
+        (over_edges.into_iter().collect::<Vec<_>>(), 
+         under_edges.into_iter().collect::<Vec<_>>())
+    };
+
+    for (i,n) in nodes.iter().enumerate() {
+        match &n.shape {
+            NodeShape::Switch { dir, side, .. } => {
+                let (l,r) = lr(i,*dir);
+                for e_l in &l {
+                    for e_r in &r {
+                        lt.insert((*e_r,*e_l));
+                    }
+                }
+            },
+            _ => {},
+        }
+    }
+
+    lt.into_iter().collect()
 }
 
 fn main() {
@@ -80,9 +188,23 @@ fn main() {
     let ctx = z3::Context::new(&conf);
     let opt = z3::Optimize::new(&ctx);
 
-    let nodes = vec![Node { name: "n1".to_string(), shape: NodeShape::Begin(0), pos: 100.0 },
-                     Node { name: "n2".to_string(), shape: NodeShape::End(0), pos: 200.0 }];
-    let edges = vec![Edge { a: port(0, Port::Out), b: port(1, Port::In) }];
+    let nodes = vec![
+        Node { name: "n1".to_string(), shape: NodeShape::Begin(0), pos: 100.0 },
+        Node { name: "sw".to_string(), shape: NodeShape::Switch{
+            side: Side::Left, dir: Dir::Outgoing, 
+            trunk: 0, left: 1, right: 2,
+        }, pos: 200.0 },
+        Node { name: "e1".to_string(), shape: NodeShape::End(1), pos: 300.0 },
+        Node { name: "e2".to_string(), shape: NodeShape::End(2), pos: 400.0 },
+    ];
+    let edges = vec![
+        Edge { a: port(0, Port::Out),   b: port(1, Port::Trunk) },
+        Edge { a: port(1, Port::Left),  b: port(2, Port::In) },
+        Edge { a: port(1, Port::Right), b: port(3, Port::In) },
+    ];
+
+    let edges_lt = less_than(&nodes, &edges);
+    println!("LESS than relation: {:?}", edges_lt);
 
     let zero_int = ctx.from_i64(0);
     let zero_real = ctx.from_real(0,1); // 0.0
@@ -159,13 +281,13 @@ fn main() {
             let b_straight = a_slanted.not();
 
             let absdy1factor = match (&node_a.shape, &e.a.port) {
-                (Switch { dir: Dir::Outgoing, ..  },               Port::Right) => -1,
-                (Switch { side: Side::Left,  dir: Dir::Incoming }, Port::Trunk) => -1,
+                (Switch { dir: Dir::Outgoing, ..  },                   Port::Right) => -1,
+                (Switch { side: Side::Left,  dir: Dir::Incoming, .. }, Port::Trunk) => -1,
                 _ => 1,
             };
             let absdy2factor = match (&node_b.shape, &e.b.port) {
-                (Switch { dir: Dir::Incoming, ..  },               Port::Right) => -1,
-                (Switch { side: Side::Left,  dir: Dir::Outgoing }, Port::Trunk) => -1,
+                (Switch { dir: Dir::Incoming, ..  },                   Port::Right) => -1,
+                (Switch { side: Side::Left,  dir: Dir::Outgoing, .. }, Port::Trunk) => -1,
                 _ => 1,
             };
 
