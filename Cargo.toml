@@ -4,4 +4,7 @@ version = "0.1.0"
 authors = ["Bjørnar Luteberget <luteberget@gmail.com>"]
 
 [dependencies]
+clap = "*"
+failure = "*"
+failure_derive = "*"
 z3 = "*"
