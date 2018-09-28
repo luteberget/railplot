@@ -83,7 +83,9 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
         }
     }
 
-    nodes_in.sort_by_key(|k| k.0.clone() ); // TODO why does this need clone
+    //nodes_in.sort_by_key(|k| k.2 );
+    nodes_in.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
+
 
     let mut edges = Vec::new();
     let mut nodes = Vec::new();

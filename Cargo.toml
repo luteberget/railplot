@@ -8,3 +8,4 @@ clap = "*"
 failure = "*"
 failure_derive = "*"
 z3 = "*"
+rolling = {path = "../rolling" }

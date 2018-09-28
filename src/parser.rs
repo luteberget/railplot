@@ -44,8 +44,11 @@ pub fn file_contents(f :&Path) -> Result<String, failure::Error> {
 }
 
 pub fn read_file(s :&Path) -> Result<Vec<Stmt>, failure::Error> {
-    let contents = file_contents(s)?;
-    let lex = lexer(&mut contents.chars())?;
+    read_string(&file_contents(s)?)
+}
+
+pub fn read_string(s:&str) -> Result<Vec<Stmt>, failure::Error> {
+    let lex = lexer(&mut s.chars())?;
     let res = parse(&lex)?;
     Ok(res)
 }

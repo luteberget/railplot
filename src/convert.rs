@@ -1,0 +1,268 @@
+// Convert from rolling D-graph to solver input
+//
+
+use rolling::get_infrastructure;
+use rolling::input::staticinfrastructure::*;
+use solver::SolverInput;
+use std::path::Path;
+use failure::Error;
+
+type PortRef = (usize,Port);
+fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,f64)], gnode :&GNodeData) -> Result<HashMap<usize, f64>, Error>{
+    let mut pos = HashMap::new();
+    pos.insert(nodes[0], 0.0); // Anchor first node in list at zero.
+
+    let (up_edges, down_edges) = {
+        let mut up_edges :HashMap<usize,Vec<(usize,f64)>> = HashMap::new();
+        let mut down_edges :HashMap<usize,Vec<(usize,f64)>> = HashMap::new();
+        for ((x,_),(y,_),d) in edges {
+            up_edges  .entry(*x).or_insert_with(Vec::new).push((*y,*d));
+            down_edges.entry(*y).or_insert_with(Vec::new).push((*x,*d));
+        }
+        (up_edges,down_edges)
+    };
+
+    let mut queue = vec![nodes[0]];
+    while queue.len() > 0 {
+        //println!("pos {:?}",pos);
+        let n = queue.pop().unwrap();
+        for (up,d) in up_edges.get(&n).unwrap_or(&Vec::new()).iter() {
+            if !pos.contains_key(up) {
+                let p = pos[&n]+d;
+                pos.insert(*up, p);
+                queue.push(*up);
+            }
+        }
+        for (down,d) in down_edges.get(&n).unwrap_or(&Vec::new()).iter() {
+            if !pos.contains_key(down) {
+                let p = pos[&n]-d;
+                pos.insert(*down, p);
+                queue.push(*down);
+            }
+        }
+    }
+    //println!("finished pos");
+
+    Ok(pos)
+}
+
+pub fn convert(s :&Path) -> Result<String, Error> {
+    use std::fmt::Write;
+
+    let mut output = String::new();
+    let x = get_infrastructure(s)?;
+    let gnode = gnode(&x)?;
+    let (nodes,edges) = major(&gnode)?;
+    let pos = mk_pos(&nodes, &edges, &gnode)?;
+
+    let lookup_names = x.node_names.iter().map(|(k,v)| (*v,k.clone())).collect::<HashMap<usize,String>>();
+
+    for i in nodes  {
+        let name = &lookup_names[&i];
+        let typ_ = match gnode.nodes[&i] {
+            GNode::Begin(_) => "begin",
+            GNode::End(_) => "end",
+            GNode::Switch(Side::Left, Dir::Up, _, _)    => "outleftsw",
+            GNode::Switch(Side::Right, Dir::Up, _, _)   => "outrightsw",
+            GNode::Switch(Side::Left, Dir::Down, _, _)  => "inleftsw",
+            GNode::Switch(Side::Right, Dir::Down, _, _) => "inrightsw",
+            GNode::Linear(_,_) => panic!("Unexpected node type"),
+        };
+        writeln!(&mut output, "node {} {} {}", name, typ_, pos[&i]);
+    }
+
+    for ((e1,p1),(e2,p2),d) in edges {
+        let p = |p:Port| match p {
+            Port::Out => "out",
+            Port::In => "in",
+            Port::Trunk => "trunk",
+            Port::Left => "left",
+            Port::Right => "right",
+            Port::Top => "top",
+            Port::Bottom => "bottom",
+        };
+        writeln!(&mut output, "edge {}.{} {}.{}", 
+                 &lookup_names[&e1], p(p1),
+                 &lookup_names[&e2], p(p2));
+    }
+
+    Ok(output)
+
+}
+
+
+use parser::{Dir,Side,Port};
+#[derive(Debug)]
+enum GNode {
+    Begin(usize),
+    End(usize),
+    Linear(usize,usize),
+    Switch(Side, Dir, usize, (usize,usize)),
+}
+
+#[derive(Debug)]
+struct GNodeData {
+    nodes: HashMap<usize,GNode>,
+    dists: HashMap<(usize,usize),f64>,
+}
+
+#[derive(Debug, Fail)]
+enum InfConvError {
+    #[fail(display = "no model boundary found")]
+    NoModelBoundary,
+}
+
+fn sw_side(x :&SwitchPosition) -> Side {
+    match x {
+        SwitchPosition::Left => Side::Left,
+        SwitchPosition::Right => Side::Right,
+    }
+}
+
+fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), f64)>), Error> {
+
+    let mut majornodes = g.nodes.iter().filter_map(|(i,ref n)| {
+        if let GNode::Linear(_,_) = *n {
+            None
+        } else {
+            Some(i.clone())
+        }
+    }).collect::<Vec<_>>();
+
+
+    // Create up edges from each major
+    //
+    let mut edges = Vec::new();
+    let find_in_port = |mut last: usize, mut x:usize| {
+        let mut dist = g.dists[&(last,x)];
+        while let GNode::Linear(from,to) = g.nodes[&x] {
+            last = x;
+            x = to;
+            dist += g.dists[&(last,x)];
+        }
+        match g.nodes[&x] {
+            GNode::End(_) => (x, Port::In, dist),
+            GNode::Switch(side, Dir::Up, _, _) => (x, Port::Trunk, dist),
+            GNode::Switch(side, Dir::Down, _, (left, right)) => {
+                if last == left { (x, Port::Left, dist) }
+                else if last == right { (x, Port::Right, dist) }
+                else { panic!("Inconsistent node network.") }
+            }
+            _ => panic!("Inconsistent node network."),
+        }
+    };
+    for &node_i in &majornodes {
+        match g.nodes[&node_i] {
+            GNode::Begin(x) => {
+                let outport = (node_i, Port::Out);
+                let inport = find_in_port(node_i, x);
+                edges.push(((node_i, Port::Out),find_in_port(node_i, x)));
+            },
+            GNode::Switch(pos, Dir::Up, trunk, (left,right)) => {
+                edges.push(((node_i, Port::Left), find_in_port(node_i, left)));
+                edges.push(((node_i, Port::Right), find_in_port(node_i, right)));
+            },
+            GNode::Switch(pos, Dir::Down, trunk, (left,right)) => {
+                edges.push(((node_i, Port::Trunk), find_in_port(node_i, trunk)));
+            },
+            _ => {} // These are all the possible up-dir edges from nodes
+        }
+    }
+
+    majornodes.sort();
+    let mut edges = edges.into_iter().map(|(x,(y,z,d))| (x,(y,z),d)).collect::<Vec<_>>();
+    edges.sort_by_key(|((x,_),_,_)| *x);
+    Ok((majornodes,edges))
+}
+
+use std::collections::{HashSet, HashMap};
+fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
+
+    let boundaries = inf.nodes.iter().enumerate().filter_map(|(i, ref n)| {
+        if let Edges::ModelBoundary = n.edges { 
+            Some(i)
+        } else {
+            None
+        }}).collect::<Vec<_>>();
+    let boundary = *boundaries.iter().nth(0).ok_or(InfConvError::NoModelBoundary)?;
+
+    println!("Selected boundary {:?}", boundary);
+
+    let mut nodes = HashMap::new();
+    let mut visited = HashSet::new();
+    // TODO use an actual queue to do breadth-first and get better vertical node placements?
+    let mut queue = vec![boundary];
+    let mut dists = HashMap::new();
+
+    while queue.len() > 0 {
+        let n = queue.pop().unwrap();
+        visited.insert(n);
+        visited.insert(inf.nodes[n].other_node);
+
+        // Add nodes in down direction
+        match inf.nodes[n].edges {
+            Edges::ModelBoundary | Edges::Nothing => {
+                nodes.insert(n, GNode::Begin(inf.nodes[n].other_node));
+                dists.insert((n, inf.nodes[n].other_node), 0.0);
+            },
+            Edges::Single(a,d) => {
+                // Down direction a -> n | o
+                nodes.insert(n, GNode::Linear(a, inf.nodes[n].other_node));
+                dists.insert((n, inf.nodes[n].other_node), 0.0);
+                dists.insert((a,n), d);
+
+                let opposite_down = inf.nodes[a].other_node;
+                if ! visited.contains(&opposite_down) { queue.push(opposite_down); }
+            },
+
+            Edges::Switchable(obj) => {
+                if let StaticObject::Switch { ref left_link, ref right_link, ref branch_side } = inf.objects[obj] {
+                    // Switch in down direction == incoming switch == down
+                    nodes.insert(n, GNode::Switch(sw_side(branch_side), Dir::Down, inf.nodes[n].other_node,
+                                             (left_link.0, right_link.0)));
+                    dists.insert((left_link.0, n), left_link.1);
+                    dists.insert((right_link.0, n), right_link.1);
+
+                    for ni in &[left_link.0, right_link.0] {
+                        let other_ni = inf.nodes[*ni].other_node;
+                        if !visited.contains(&other_ni) { queue.push(other_ni); }
+                    }
+                } else {
+                    panic!("Not a switch");
+                }
+            }
+        }
+
+        // inspect in up direction
+        let upnode = inf.nodes[n].other_node;
+        match inf.nodes[upnode].edges {
+            Edges::ModelBoundary | Edges::Nothing => {
+                nodes.insert(upnode, GNode::End(n));
+                dists.insert((n,upnode),0.0);
+            },
+            Edges::Single(a,d) => {
+                nodes.insert(upnode, GNode::Linear(n,a));
+                dists.insert((n,upnode), 0.0);
+                dists.insert((upnode, a), d);
+                if !visited.contains(&a) { queue.push(a);}
+            },
+            Edges::Switchable(obj) => {
+                if let StaticObject::Switch { ref left_link, ref right_link, ref branch_side } = inf.objects[obj] {
+                    // Switch in up direction == outgoing switch
+                    nodes.insert(upnode, GNode::Switch(sw_side(branch_side), Dir::Up, n, 
+                                                      (left_link.0, right_link.0)));
+                    dists.insert((upnode, left_link.0), left_link.1);
+                    dists.insert((upnode, right_link.0), right_link.1);
+
+                    for ni in &[left_link.0, right_link.0] {
+                        if !visited.contains(ni) { queue.push(*ni); }
+                    }
+                } else {
+                    panic!("Not a switch");
+                }
+            }
+        }
+    }
+
+    Ok(GNodeData { nodes, dists })
+}
