@@ -43,6 +43,16 @@ fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,f64)], gnode :&GNodeData) -
     }
     //println!("finished pos");
 
+    // Reset to zero
+    use std;
+    let mut min = std::f64::INFINITY;
+    for (_,&d) in pos.iter() {
+        min = f64::min(min,d);
+    }
+    for (_, d) in pos.iter_mut() {
+        *d -= min;
+    }
+
     Ok(pos)
 }
 

@@ -86,7 +86,6 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
     //nodes_in.sort_by_key(|k| k.2 );
     nodes_in.sort_by(|a, b| a.2.partial_cmp(&b.2).unwrap());
 
-
     let mut edges = Vec::new();
     let mut nodes = Vec::new();
     let mut edge_to : HashMap<PortRef, usize> = HashMap::new();
@@ -101,6 +100,8 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
             }
         }
 
+        edges_in.sort_by_key(|((n1,_),_)| node_names[n1].clone());
+
 
         for ((n1,p1),(n2,p2)) in edges_in {
             edge_to.insert(port(node_names[&n1], p1), edges.len());
@@ -111,6 +112,7 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
             });
         }
     }
+
 
     for (name,shape,pos) in nodes_in {
         let ni = nodes.len();
@@ -229,8 +231,8 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
                         let (_,edge) = under_queue.pop().unwrap();
                         under_edges.insert(edge);
                         for edge_i in next_edges(edge_node(edge)) {
-                            over_nodes.insert(edge_node(*edge_i));
-                            over_queue.push((dirfactor*edge_node(*edge_i) as isize, *edge_i));
+                            under_nodes.insert(edge_node(*edge_i));
+                            under_queue.push((dirfactor*edge_node(*edge_i) as isize, *edge_i));
                         }
                     }
                 }
@@ -261,7 +263,9 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
         }
     }
 
-    lt.into_iter().collect()
+    let mut lt = lt.into_iter().collect::<Vec<_>>();
+    lt.sort();
+    lt
 }
 
 #[derive(Debug)]

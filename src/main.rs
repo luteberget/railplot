@@ -74,6 +74,15 @@ fn main() {
         return;
     }
 
+    if debug {
+        for (i,n) in input.as_ref().unwrap().nodes.iter().enumerate() {
+            println!("n{}: {:?}", i, n);
+        }
+        for (i,e) in input.as_ref().unwrap().edges.iter().enumerate() {
+            println!("e{}: {:?}", i, e);
+        }
+    }
+
     if verbose { println!("Solving."); }
     let output = solver::solve(input.unwrap()).expect("Solver failed");
     if verbose { 
