@@ -8,16 +8,17 @@ use std::path::Path;
 use failure::Error;
 
 type PortRef = (usize,Port);
-fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,f64)], gnode :&GNodeData) -> Result<HashMap<usize, f64>, Error>{
+fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,Vec<(usize,usize,f64)>)], gnode :&GNodeData) -> Result<HashMap<usize, f64>, Error>{
     let mut pos = HashMap::new();
     pos.insert(nodes[0], 0.0); // Anchor first node in list at zero.
 
     let (up_edges, down_edges) = {
         let mut up_edges :HashMap<usize,Vec<(usize,f64)>> = HashMap::new();
         let mut down_edges :HashMap<usize,Vec<(usize,f64)>> = HashMap::new();
-        for ((x,_),(y,_),d) in edges {
-            up_edges  .entry(*x).or_insert_with(Vec::new).push((*y,*d));
-            down_edges.entry(*y).or_insert_with(Vec::new).push((*x,*d));
+        for ((x,_),(y,_),dists) in edges {
+            let d :f64 = dists.iter().map(|(_a,_b,d)| d).sum();
+            up_edges  .entry(*x).or_insert_with(Vec::new).push((*y,d));
+            down_edges.entry(*y).or_insert_with(Vec::new).push((*x,d));
         }
         (up_edges,down_edges)
     };
@@ -56,7 +57,8 @@ fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,f64)], gnode :&GNodeData) -
     Ok(pos)
 }
 
-pub fn convert(s :&Path) -> Result<String, Error> {
+pub type OrigEdges = HashMap<((String, Port),(String,Port)),Vec<(String,String,f64)>>;
+pub fn convert(s :&Path) -> Result<(String,OrigEdges), Error> {
     use std::fmt::Write;
 
     let mut output = String::new();
@@ -81,7 +83,7 @@ pub fn convert(s :&Path) -> Result<String, Error> {
         writeln!(&mut output, "node {} {} {}", name, typ_, pos[&i]);
     }
 
-    for ((e1,p1),(e2,p2),d) in edges {
+    for ((e1,p1),(e2,p2),d) in &edges {
         let p = |p:Port| match p {
             Port::Out => "out",
             Port::In => "in",
@@ -92,12 +94,23 @@ pub fn convert(s :&Path) -> Result<String, Error> {
             Port::Bottom => "bottom",
         };
         writeln!(&mut output, "edge {}.{} {}.{}", 
-                 &lookup_names[&e1], p(p1),
-                 &lookup_names[&e2], p(p2));
+                 &lookup_names[&e1], p(*p1),
+                 &lookup_names[&e2], p(*p2));
     }
 
-    Ok(output)
+    let mut original_edges = HashMap::new();
+    for ((e1,p1),(e2,p2),d) in &edges {
+        let edge_id = ((lookup_names[&e1].clone(), *p1),
+                       (lookup_names[&e2].clone(),*p2));
+        let d = d.iter().map(|(a,b,d)| 
+                             (lookup_names[&a].clone(), 
+                              lookup_names[&b].clone(), *d)).collect::<Vec<_>>();
+        original_edges.insert(edge_id,d);
+    }
 
+    println!("ORIGINAL EDGES {:?}", original_edges);
+
+    Ok((output, original_edges))
 }
 
 
@@ -129,7 +142,7 @@ fn sw_side(x :&SwitchPosition) -> Side {
     }
 }
 
-fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), f64)>), Error> {
+fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Vec<(usize,usize,f64)>)>), Error> {
 
     let mut majornodes = g.nodes.iter().filter_map(|(i,ref n)| {
         if let GNode::Linear(_,_) = *n {
@@ -144,18 +157,18 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), f6
     //
     let mut edges = Vec::new();
     let find_in_port = |mut last: usize, mut x:usize| {
-        let mut dist = g.dists[&(last,x)];
+        let mut dists = Vec::new();
         while let GNode::Linear(from,to) = g.nodes[&x] {
             last = x;
             x = to;
-            dist += g.dists[&(last,x)];
+            dists.push((last,x,g.dists[&(last,x)]));
         }
         match g.nodes[&x] {
-            GNode::End(_) => (x, Port::In, dist),
-            GNode::Switch(side, Dir::Up, _, _) => (x, Port::Trunk, dist),
+            GNode::End(_) => (x, Port::In, dists),
+            GNode::Switch(side, Dir::Up, _, _) => (x, Port::Trunk, dists),
             GNode::Switch(side, Dir::Down, _, (left, right)) => {
-                if last == left { (x, Port::Left, dist) }
-                else if last == right { (x, Port::Right, dist) }
+                if last == left { (x, Port::Left, dists) }
+                else if last == right { (x, Port::Right, dists) }
                 else { panic!("Inconsistent node network.") }
             }
             _ => panic!("Inconsistent node network."),

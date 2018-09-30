@@ -47,8 +47,8 @@ pub struct Node {
 
 #[derive(Copy,Clone,Hash,Debug,PartialEq, Eq)]
 pub struct PortRef {
-    node: usize,
-    port: Port,
+    pub node: usize,
+    pub port: Port,
 }
 
 pub fn port(node: usize, port: Port) -> PortRef { PortRef { node, port } }
@@ -68,8 +68,8 @@ pub struct SolverInput {
     pub edges: Vec<Edge>,
 }
 
-pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
-    use std::collections::HashMap;
+use std::collections::HashMap;
+pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,usize>), String> {
     let mut nodes_in = Vec::new();
     let mut edges_in = Vec::new();
     for s in stmts.into_iter() {
@@ -89,13 +89,13 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
     let mut edges = Vec::new();
     let mut nodes = Vec::new();
     let mut edge_to : HashMap<PortRef, usize> = HashMap::new();
+    let mut node_names = HashMap::new();
 
     {
-        let mut node_names = HashMap::new();
         {
             let mut node_i = 0;
             for (ref name, ref _sh, ref _pos) in &nodes_in {
-                node_names.insert(name, node_i);
+                node_names.insert(name.clone(), node_i);
                 node_i += 1;
             }
         }
@@ -133,7 +133,7 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<SolverInput, String> {
         });
     }
 
-    Ok(SolverInput { nodes, edges })
+    Ok((SolverInput { nodes, edges }, node_names))
 }
 
 //  node->edge lookup
@@ -270,14 +270,15 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
 
 #[derive(Debug)]
 pub struct SolverOutput {
-    pub node_coords: Vec<(String, f64, usize)>,
+    pub node_coords: Vec<(String, f64, f64)>,
     // TODO do we need to have names for edges for later consumption?
-    pub edge_levels: Vec<(PortRef, PortRef, usize)>,
+    pub edge_levels: Vec<(PortRef, PortRef, f64)>,
 }
 
 pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
     let mut conf = z3::Config::new();
-    conf.set_param_value("trace","true");
+    //conf.set_param_value("trace","true");
+    //conf.set_param_value("auto_config","false");
     let ctx = z3::Context::new(&conf);
     let opt = z3::Optimize::new(&ctx);
 
@@ -300,9 +301,9 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
     //];
 
     let edges_lt = less_than(&nodes, &edges);
-    println!("LESS than relation: {:?}", edges_lt);
+    //println!("LESS than relation: {:?}", edges_lt);
 
-    let zero_int = ctx.from_i64(0);
+    //let zero_int = ctx.from_i64(0);
     let zero_real = ctx.from_real(0,1); // 0.0
     let one_real  = ctx.from_real(1,1); // 1.0
     let two_real  = ctx.from_real(2,1); // 1.0
@@ -314,16 +315,16 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
     for n in &nodes {
         let x = ctx.fresh_real_const("nx");
         opt.assert(&x.ge(&zero_real));
-        let y = ctx.fresh_int_const("ny");
-        opt.assert(&y.ge(&zero_int));
+        let y = ctx.fresh_real_const("ny");
+        opt.assert(&y.ge(&zero_real));
 
         node_data.push(NodeRepr { x, y });
     }
 
     let mut edge_data = Vec::new();
     for e in &edges {
-        let y = ctx.fresh_int_const("ey");
-        opt.assert(&y.ge(&zero_int));
+        let y = ctx.fresh_real_const("ey");
+        opt.assert(&y.ge(&zero_real));
 
         let na_y = &node_data[e.a.node].y;
         let nb_y = &node_data[e.b.node].y;
@@ -348,9 +349,11 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
 
     // Node ordering X
     for ((i,na),nb) in node_data.iter().enumerate().zip(node_data.iter().skip(1)) {
-        opt.assert(&na.x.le(&nb.x));
+        let small = ctx.from_real(1,4);
+        opt.assert(&na.x.add(&[&small]).le(&nb.x));
         // KM / MILEAGE DIFF
-        //let posdiff = (nodes[i+1].pos - nodes[i].pos) as i32;
+        // 300 m must be one unit
+        //let posdiff = (1.0/(300.0)*(nodes[i+1].pos - nodes[i].pos)) as i32;
         //opt.assert(&na.x.add(&[&ctx.from_real(posdiff,1)]).le(&nb.x));
     }
 
@@ -374,7 +377,7 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
             let a_slanted = node_slanted[e.a.node].and(&[&true_bool()]);
             let a_straight = a_slanted.not();
             let b_slanted = node_slanted[e.b.node].and(&[&true_bool()]);
-            let b_straight = a_slanted.not();
+            let b_straight = b_slanted.not();
 
             let absdy1factor = match (&node_a.shape, &e.a.port) {
                 (Switch { dir: Dir::Up, ..  },                   Port::Right) => -1,
@@ -391,6 +394,7 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
 
                 (Begin(_), Port::Out) => 
                     Dirs { is_straight: true_bool(), .. Dirs::new(&ctx) },
+                    
                 (Switch { side: Side::Left, dir: Dir::Up, .. }, Port::Left) => 
                     Dirs { is_up: a_straight, is_straight: a_slanted, .. Dirs::new(&ctx) },
                 (Switch { side: Side::Left, dir: Dir::Up, .. }, Port::Right) => 
@@ -399,6 +403,7 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
                     Dirs { is_down: a_straight, is_straight: a_slanted, .. Dirs::new(&ctx) },
                 (Switch { side: Side::Right, dir: Dir::Up, .. }, Port::Left) => 
                     Dirs { is_straight: a_straight, is_up: a_slanted, .. Dirs::new(&ctx) },
+
                 (Switch { side: Side::Left, dir: Dir::Down, .. }, Port::Trunk) => 
                     Dirs { is_straight: a_straight, is_down: a_slanted, .. Dirs::new(&ctx) },
                 (Switch { side: Side::Right, dir: Dir::Down, .. }, Port::Trunk) => 
@@ -469,22 +474,25 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
         // use sum of abs of dy1 and dy2 as min x-dist between nodes
         let x1 = &node_data[e.a.node].x;
         let x2 = &node_data[e.b.node].x;
-        // TODO TODO 
-        //let absdy1 = &zero_real; //edge_data[i].dy1
-        //let absdy2 = &zero_real; //edge_data[i].dy1
 
         let absdy1 = edge_data[i].dy1.mul(&[&ctx.from_real(absdy1factor,1)]);
         let absdy2 = edge_data[i].dy2.mul(&[&ctx.from_real(absdy2factor,1)]);
 
         let absy = absdy1.add(&[&absdy2]);
         opt.assert(&x1.add(&[&absy]).le(x2));
+
+        // If not same dir, then add one
+        let upup = &edge_in.is_up.  and(&[&edge_out.is_up]);
+        let dndn = &edge_in.is_down.and(&[&edge_out.is_down]);
+        opt.assert(&upup.or(&[&dndn]).not().implies( &x1.add(&[&absy, &one_real]).le(x2) ));
+
         absys.push(absy);
 
 
         // X distnace is affected by short
         let is_short = shortdown.or(&[shortup]);
         opt.assert(&is_short.implies(&x1.add(&[&one_real]).ge(x2)));
-        opt.assert(&is_short.not().implies(&x1.add(&[&two_real]).le(x2)));
+        opt.assert(&is_short.not().implies(&x1.add(&[&one_real]).le(x2)));
 
     }
 
@@ -496,17 +504,30 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
     }
 
     // First minimize slant
-    let absys_ref = absys.iter().collect::<Vec<_>>();
-    opt.minimize(&zero_real.add(&absys_ref));
+    //let absys_ref = absys.iter().collect::<Vec<_>>();
+    //opt.minimize(&zero_real.add(&absys_ref));
 
     // Then minimize size of drawing
+    //let node_xs = node_data.iter().map(|n| &n.x).collect::<Vec<&z3::Ast>>();
+    //let node_ys = node_data.iter().map(|n| &n.y).collect::<Vec<&z3::Ast>>();
+    //opt.minimize(&zero_real.add(&node_xs).add(&node_ys));
+
+    //// Then minimize height
+    //let edge_ys = edge_data.iter().map(|e| &e.y).collect::<Vec<&z3::Ast>>();
+    //opt.minimize(&zero_real.add(&edge_ys));
+    
+    // Something goes wrong sometimes when adding these multiple
+    // optimization criteria. Output is: "Error: Z3 exception".
+    // Possibly a bug in Z3?
+    //
+    // Instead, we can minimize on a single criterion, the sum of the above criteria
     let node_xs = node_data.iter().map(|n| &n.x).collect::<Vec<&z3::Ast>>();
     let node_ys = node_data.iter().map(|n| &n.y).collect::<Vec<&z3::Ast>>();
-    opt.minimize(&zero_real.add(&node_xs).add(&node_ys));
-
-    // Then minimize height
     let edge_ys = edge_data.iter().map(|e| &e.y).collect::<Vec<&z3::Ast>>();
-    opt.minimize(&zero_real.add(&edge_ys));
+    let absys_ref = absys.iter().collect::<Vec<_>>();
+    opt.minimize(&zero_real.add(&node_xs).add(&node_ys).add(&edge_ys).add(&[&zero_real.add(&absys_ref).mul(&[&ctx.from_real(100,1)])]));
+
+    let zero_real = ctx.from_real(0,1); // 0.0
 
 
     let status = opt.check();
@@ -521,14 +542,21 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
 
     for ((i,n),repr) in nodes.into_iter().enumerate().zip(node_data.iter()) {
         let x = model.eval(&repr.x).unwrap().as_real().unwrap();
-        let y = model.eval(&repr.y).unwrap().as_i64().unwrap();
-        output.node_coords.push((n.name, x.0 as f64 / x.1 as f64, y as usize));
+        let y = model.eval(&repr.y).unwrap().as_real().unwrap();
+        println!("node {}: slant={}", i, 
+                 model.eval(&node_slanted[i]).unwrap().as_bool().unwrap());
+        output.node_coords.push((n.name, x.0 as f64 / x.1 as f64, 
+                                 y.0 as f64 / y.1 as f64));
     }
 
     for ((i,e),repr) in edges.iter().enumerate().zip(edge_data.iter()) {
-        let y = model.eval(&repr.y).unwrap().as_i64().unwrap();
-        //println!("edge {}: {:?}", i,y);
-        output.edge_levels.push((e.a,e.b,y as usize));
+        let y = model.eval(&repr.y).unwrap().as_real().unwrap();
+        let dy1 = model.eval(&repr.dy1).unwrap().as_real().unwrap();
+        let dy2 = model.eval(&repr.dy2).unwrap().as_real().unwrap();
+        let shortup = model.eval(&repr.shortup).unwrap().as_bool().unwrap();
+        let shortdown = model.eval(&repr.shortdown).unwrap().as_bool().unwrap();
+        println!("edge {}: {:?} {:?} {:?} {:?} {:?} ", i,y, dy1,dy2,shortup,shortdown);
+        output.edge_levels.push((e.a,e.b,y.0 as f64 / y.1 as f64));
     }
 
     Ok(output)

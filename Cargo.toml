@@ -9,3 +9,4 @@ failure = "*"
 failure_derive = "*"
 z3 = "*"
 rolling = {path = "../rolling" }
+serde_json = "*"
