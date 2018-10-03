@@ -12,15 +12,16 @@ type NodeRef = usize;
 
 #[derive(Debug)]
 pub enum NodeShape {
-    Begin(EdgeRef), // index of edge
-    End(EdgeRef),   // index of edge
+    Begin,
+    End,
     Switch {
         side: Side,
         dir :Dir,
         left :EdgeRef,
         right :EdgeRef,
         trunk :EdgeRef,
-    }
+    },
+    Vertical,
 }
 
 pub struct Dirs<'c> {
@@ -120,15 +121,15 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,u
             name: name,
             pos: pos,
             shape:  match shape {
-                parser::Shape::Begin => NodeShape::Begin(0),
-                parser::Shape::End => NodeShape::End(0),
+                parser::Shape::Begin => NodeShape::Begin,
+                parser::Shape::End => NodeShape::End,
                 parser::Shape::Switch(side,dir) => NodeShape::Switch {
                     side, dir,
                     left: edge_to[&port(ni,Port::Left)],
                     right: edge_to[&port(ni,Port::Right)],
                     trunk: edge_to[&port(ni,Port::Trunk)],
                 },
-                parser::Shape::Vertical => panic!("vertical unsupported"),
+                parser::Shape::Vertical => NodeShape::Vertical,
             }
         });
     }
@@ -192,13 +193,14 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
 
         let next_edges = |n:NodeRef| match (dir, &nodes[n].shape) {
             // TODO get rid of allocation with smallvec? probably not worth much.
-            (Dir::Up, NodeShape::End(_)) => vec![],
+            (Dir::Up, NodeShape::End) => vec![],
             (Dir::Up, NodeShape::Switch { dir: Dir::Up, left, right, .. }) => vec![left, right],
             (Dir::Up, NodeShape::Switch { dir: Dir::Down, trunk, .. }) => vec![trunk],
-            (Dir::Down, NodeShape::Begin(_)) => vec![],
+            (Dir::Down, NodeShape::Begin) => vec![],
             (Dir::Down, NodeShape::Switch { dir: Dir::Down, left, right, .. }) => vec![left, right],
             (Dir::Down, NodeShape::Switch { dir: Dir::Up, trunk, .. }) => vec![trunk],
-             _ => panic!(),
+            // TODO is this correct?
+             _ => panic!("next_edges does not support vertical nodes"),
         };
 
         let mut over_edges = HashSet::new();
@@ -276,38 +278,19 @@ pub struct SolverOutput {
 }
 
 pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
-    let mut conf = z3::Config::new();
-    //conf.set_param_value("trace","true");
-    //conf.set_param_value("auto_config","false");
+    let conf = z3::Config::new();
     let ctx = z3::Context::new(&conf);
     let opt = z3::Optimize::new(&ctx);
 
     let nodes = input.nodes;
     let edges = input.edges;
 
-    //let nodes = vec![
-    //    Node { name: "n1".to_string(), shape: NodeShape::Begin(0), pos: 100.0 },
-    //    Node { name: "sw".to_string(), shape: NodeShape::Switch{
-    //        side: Side::Left, dir: Dir::Up, 
-    //        trunk: 0, left: 1, right: 2,
-    //    }, pos: 200.0 },
-    //    Node { name: "e1".to_string(), shape: NodeShape::End(1), pos: 300.0 },
-    //    Node { name: "e2".to_string(), shape: NodeShape::End(2), pos: 400.0 },
-    //];
-    //let edges = vec![
-    //    Edge { a: port(0, Port::Out),   b: port(1, Port::Trunk) },
-    //    Edge { a: port(1, Port::Left),  b: port(2, Port::In) },
-    //    Edge { a: port(1, Port::Right), b: port(3, Port::In) },
-    //];
-
     let edges_lt = less_than(&nodes, &edges);
-    //println!("LESS than relation: {:?}", edges_lt);
 
-    //let zero_int = ctx.from_i64(0);
-    let zero_real = ctx.from_real(0,1); // 0.0
-    let one_real  = ctx.from_real(1,1); // 1.0
-    let two_real  = ctx.from_real(2,1); // 1.0
-    let negone_real  = ctx.from_real(-1,1); // 1.0
+    let zero_real = ctx.from_real(0,1);     //  0.0
+    let one_real  = ctx.from_real(1,1);     //  1.0
+    let two_real  = ctx.from_real(2,1);     //  2.0
+    let negone_real  = ctx.from_real(-1,1); // -1.0
     let true_bool = || ctx.from_bool(true);
     let false_bool = || ctx.from_bool(false);
 
@@ -326,10 +309,20 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
         let y = ctx.fresh_real_const("ey");
         opt.assert(&y.ge(&zero_real));
 
-        let na_y = &node_data[e.a.node].y;
-        let nb_y = &node_data[e.b.node].y;
-        let dy1 = y.sub(&[na_y]);
-        let dy2 = nb_y.sub(&[&y]);
+        // start end (dy1) and end end (dy2) have 45-degree
+        // sections with given length. When going into a top port,
+        // 1 is added to the node Y value so that we get room for
+        // a vertical section.
+        let dy1 = match (&nodes[e.a.node].shape,&e.a.port) {
+            (NodeShape::Vertical { .. }, Port::Top) => 
+                 y.sub(&[&node_data[e.a.node].y, &one_real]),
+            _ => y.sub(&[&node_data[e.a.node].y]),
+        };
+        let dy2 = match (&nodes[e.b.node].shape,&e.b.port) {
+            (NodeShape::Vertical { .. }, Port::Top) => 
+                 (node_data[e.b.node].y).add(&[&one_real]).sub(&[&y]),
+            _ => (node_data[e.b.node].y).sub(&[&y]),
+        };
 
         let shortup = ctx.fresh_bool_const("e_bothup");
         let shortdown = ctx.fresh_bool_const("e_bothdown");
@@ -382,17 +375,19 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
             let absdy1factor = match (&node_a.shape, &e.a.port) {
                 (Switch { dir: Dir::Up, ..  },                   Port::Right) => -1,
                 (Switch { side: Side::Left,  dir: Dir::Down, .. }, Port::Trunk) => -1,
+                (Vertical { .. }, Port::Bottom) => -1,
                 _ => 1,
             };
             let absdy2factor = match (&node_b.shape, &e.b.port) {
                 (Switch { dir: Dir::Down, ..  },                   Port::Right) => -1,
                 (Switch { side: Side::Left,  dir: Dir::Up, .. }, Port::Trunk) => -1,
+                (Vertical { .. }, Port::Top) => -1,
                 _ => 1,
             };
 
             let edge_out = match (&node_a.shape, &e.a.port) {
 
-                (Begin(_), Port::Out) => 
+                (Begin, Port::Out) => 
                     Dirs { is_straight: true_bool(), .. Dirs::new(&ctx) },
                     
                 (Switch { side: Side::Left, dir: Dir::Up, .. }, Port::Left) => 
@@ -408,12 +403,16 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
                     Dirs { is_straight: a_straight, is_down: a_slanted, .. Dirs::new(&ctx) },
                 (Switch { side: Side::Right, dir: Dir::Down, .. }, Port::Trunk) => 
                     Dirs { is_straight: a_straight, is_up: a_slanted, .. Dirs::new(&ctx) },
+                (Vertical { .. }, Port::Top) => 
+                    Dirs { is_up: true_bool(), .. Dirs::new(&ctx) },
+                (Vertical { .. }, Port::Bottom) => 
+                    Dirs { is_down: true_bool(), .. Dirs::new(&ctx) },
 
                 _ => panic!("Bad combination"),
             };
 
             let edge_in = match (&node_b.shape, &e.b.port) {
-                (End(_), In) => 
+                (End, In) => 
                     Dirs { is_straight: true_bool(), .. Dirs::new(&ctx) },
 
                     // Down
@@ -431,6 +430,10 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
                     Dirs { is_straight: b_straight, is_up: b_slanted, .. Dirs::new(&ctx) },
                 (Switch { side: Side::Left, dir: Dir::Up, .. }, Port::Trunk) => 
                     Dirs { is_straight: b_straight, is_down: b_slanted, .. Dirs::new(&ctx) },
+                (Vertical { .. }, Port::Top) => 
+                    Dirs { is_down: true_bool(), .. Dirs::new(&ctx) },
+                (Vertical { .. }, Port::Bottom) => 
+                    Dirs { is_up: true_bool(), .. Dirs::new(&ctx) },
 
                 _ => panic!("Bad combo"),
             };
@@ -543,8 +546,8 @@ pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
     for ((i,n),repr) in nodes.into_iter().enumerate().zip(node_data.iter()) {
         let x = model.eval(&repr.x).unwrap().as_real().unwrap();
         let y = model.eval(&repr.y).unwrap().as_real().unwrap();
-        println!("node {}: slant={}", i, 
-                 model.eval(&node_slanted[i]).unwrap().as_bool().unwrap());
+        println!("node {}: slant={} (x={:?},y={:?})", i, 
+                 model.eval(&node_slanted[i]).unwrap().as_bool().unwrap(),x,y);
         output.node_coords.push((n.name, x.0 as f64 / x.1 as f64, 
                                  y.0 as f64 / y.1 as f64));
     }
