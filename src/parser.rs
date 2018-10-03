@@ -9,10 +9,10 @@ type Id = String;
 //use input::{Side, Dir, Port};
 #[derive(Debug, Copy, Clone)]
 pub enum Side { Left, Right }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Dir { Up, Down }
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom }
+pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown top/bottom */ }
 #[derive(Debug)]
 pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
 type PortRef = (Id, Port); 
@@ -108,6 +108,7 @@ fn parse_port(i :&mut usize, t :&[Token]) -> Result<Port, ParseError> {
         &|i,t| symbol(i,t,"right").map(|_| Port::Right),
         &|i,t| symbol(i,t,"top").map(|_| Port::Top),
         &|i,t| symbol(i,t,"bottom").map(|_| Port::Bottom),
+        &|i,t| symbol(i,t,"topbottom").map(|_| Port::TopBottom),
     ])
 }
 

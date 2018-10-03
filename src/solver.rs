@@ -70,6 +70,7 @@ pub struct SolverInput {
 }
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,usize>), String> {
     let mut nodes_in = Vec::new();
     let mut edges_in = Vec::new();
@@ -277,15 +278,66 @@ pub struct SolverOutput {
     pub edge_levels: Vec<(PortRef, PortRef, f64)>,
 }
 
-pub fn solve(input :SolverInput) -> Result<SolverOutput,String> {
+// TODO: is this too messy? could it be done better directly in the logic?
+fn resolve_topbottom(input :&mut SolverInput, lt :&[EdgePair]) {
+    let lt : HashSet<EdgePair> = lt.iter().cloned().collect();
+
+    let mut topbottom_pairs : HashMap<(usize,Dir), Vec<usize>> = HashMap::new();
+    for (i,e) in input.edges.iter().enumerate() {
+        if let Port::TopBottom = e.a.port {
+            topbottom_pairs.entry((e.a.node, Dir::Up)).or_insert(Vec::new()).push(i);
+        }
+        if let Port::TopBottom = e.b.port {
+            topbottom_pairs.entry((e.b.node, Dir::Down)).or_insert(Vec::new()).push(i);
+        }
+    }
+
+    for ((node,dir),edges) in topbottom_pairs.into_iter() {
+        if edges.len() != 2 {
+            panic!("TopBottom edges must come in pairs.");
+        }
+        let ea = edges[0];
+        let eb = edges[1];
+
+        if lt.contains(&(ea,eb)) {
+            match dir {
+                Dir::Up => {
+                    input.edges[ea].a.port = Port::Bottom;
+                    input.edges[eb].a.port = Port::Top;
+                },
+                Dir::Down => {
+                    input.edges[ea].b.port = Port::Bottom;
+                    input.edges[eb].b.port = Port::Top;
+                },
+            }
+        } else if lt.contains(&(eb,ea)) {
+            match dir {
+                Dir::Up => {
+                    input.edges[eb].a.port = Port::Bottom;
+                    input.edges[ea].a.port = Port::Top;
+                },
+                Dir::Down => {
+                    input.edges[eb].b.port = Port::Bottom;
+                    input.edges[ea].b.port = Port::Top;
+                },
+            }
+        } else {
+            panic!("Could not determine above/below relation on TopBottom pair.");
+        }
+    }
+}
+
+pub fn solve(mut input :SolverInput) -> Result<SolverOutput,String> {
     let conf = z3::Config::new();
     let ctx = z3::Context::new(&conf);
     let opt = z3::Optimize::new(&ctx);
 
+
+    let edges_lt = less_than(&input.nodes, &input.edges);
+    resolve_topbottom(&mut input, &edges_lt);
+
     let nodes = input.nodes;
     let edges = input.edges;
-
-    let edges_lt = less_than(&nodes, &edges);
 
     let zero_real = ctx.from_real(0,1);     //  0.0
     let one_real  = ctx.from_real(1,1);     //  1.0
