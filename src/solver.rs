@@ -201,6 +201,7 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
             (Dir::Down, NodeShape::Switch { dir: Dir::Down, left, right, .. }) => vec![left, right],
             (Dir::Down, NodeShape::Switch { dir: Dir::Up, trunk, .. }) => vec![trunk],
             // TODO is this correct?
+            (_, NodeShape::Vertical) => vec![],
              _ => panic!("next_edges does not support vertical nodes"),
         };
 
