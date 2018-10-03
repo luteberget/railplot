@@ -3,6 +3,7 @@ use solver::SolverOutput;
 use convert::OrigEdges;
 use std::collections::HashMap;
 use serde_json;
+use parser::Port;
 
 type Pt = (f64,f64);
 type Line = (Pt,Pt);
@@ -25,13 +26,17 @@ pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMa
         let (_,x2,y2) = &o.node_coords[p2.node];
         println!("{:?} -- {:?}", &o.node_coords[p1.node],
                                  &o.node_coords[p2.node]);
-        let out_length = (*y as isize - *y1 as isize).abs();
-        let in_length = (*y2 as isize - *y as isize).abs();
+
+        let (y1,mut top_a) = if let Port::Top = p1.port { (y1 + 1.0, true) } else { (*y1, false) };
+        let (y2,mut top_b) = if let Port::Top = p2.port { (y2 + 1.0, true) } else { (*y2, false) };
+
+        let out_length = (*y as isize - y1 as isize).abs();
+        let in_length = (y2 as isize - *y as isize).abs();
 
         let mut lines = Vec::new();
-        lines.push(((*x1,*y1 as f64),(x1+out_length as f64,*y as f64)));
+        lines.push(((*x1,y1 as f64),(x1+out_length as f64,*y as f64)));
         lines.push(((*x1+out_length as f64, *y as f64),(*x2-in_length as f64,*y as f64)));
-        lines.push(((*x2-in_length as f64, *y as f64),(*x2, *y2 as f64)));
+        lines.push(((*x2-in_length as f64, *y as f64),(*x2, y2 as f64)));
         println!(" LINES out={} in={} {:?}", out_length, in_length, lines);
         if out_length == 0 { lines.remove(0); }
         if out_length as f64 + in_length as f64 + 1e-9 > (x2-x1) {
@@ -49,19 +54,32 @@ pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMa
 
         let edge_id = ((node_idxs[&p1.node].clone(), p1.port),
                        (node_idxs[&p2.node].clone(), p2.port));
+        println!("looking up edge {:?}", edge_id);
         let orig_edges = &orig[&edge_id];
 
         let total :f64 = orig_edges.iter().map(|(_a,_b,d)| *d).sum();
         let mut cum :f64 = 0.0;
 
-        for (a,b,d) in orig_edges {
+        let num_edges = orig_edges.len();
+        for (i,(a,b,d)) in orig_edges.into_iter().enumerate() {
             if ! (*d > 0.0) { continue; }
             let x1_rel = cum     / total;
             let x2_rel = (cum+d) / total;
             println!("oe:::{:?} {} {}", &lines, x1_rel, x2_rel);
-            let lines = get_slice(&lines, x1_rel, x2_rel);
+            let mut lines = get_slice(&lines, x1_rel, x2_rel);
             println!("res::{:?}", lines);
             cum += d;
+
+            if top_a {
+                top_a = false;
+                lines.insert(0, ((*x1, y1-1.0),(*x1,y1)));
+            }
+
+            if i == num_edges-1 && top_b {
+                top_b = false;
+                lines.push(((*x2, y2),(*x2,y2-1.0)));
+            }
+
 
             let lines : Vec<serde_json::Value> = lines.iter().map(|(s,e)| json!([[s.0,s.1],[e.0,e.1]])).collect();
 
@@ -69,8 +87,6 @@ pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMa
             json.as_object_mut().unwrap().insert(format!("{}-{}", a, b), 
                  json!({"length": d, 
                         "lines": lines}));
-            use std::fmt::Write;
-            //writeln!(&mut json, "halla");
         }
 
         println!("edge from {:?} to {:?} through y={:?}", (x1,y1),(x2,y2),y);

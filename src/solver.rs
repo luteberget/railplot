@@ -56,10 +56,10 @@ pub fn port(node: usize, port: Port) -> PortRef { PortRef { node, port } }
 
 //pub enum Port { Out, In, Left, Right, Trunk }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Edge {
-    a : PortRef, // index of node
-    b : PortRef, // index of node
+    pub a : PortRef, // index of node
+    pub b : PortRef, // index of node
 }
 
 
@@ -279,8 +279,9 @@ pub struct SolverOutput {
 }
 
 // TODO: is this too messy? could it be done better directly in the logic?
-fn resolve_topbottom(input :&mut SolverInput, lt :&[EdgePair]) {
+fn resolve_topbottom(input :&mut SolverInput, lt :&[EdgePair]) -> Vec<(Edge,Edge)> {
     let lt : HashSet<EdgePair> = lt.iter().cloned().collect();
+    let mut changes = Vec::new();
 
     let mut topbottom_pairs : HashMap<(usize,Dir), Vec<usize>> = HashMap::new();
     for (i,e) in input.edges.iter().enumerate() {
@@ -298,6 +299,9 @@ fn resolve_topbottom(input :&mut SolverInput, lt :&[EdgePair]) {
         }
         let ea = edges[0];
         let eb = edges[1];
+
+        let ea_old = input.edges[ea].clone();
+        let eb_old = input.edges[eb].clone();
 
         if lt.contains(&(ea,eb)) {
             match dir {
@@ -324,17 +328,22 @@ fn resolve_topbottom(input :&mut SolverInput, lt :&[EdgePair]) {
         } else {
             panic!("Could not determine above/below relation on TopBottom pair.");
         }
+
+        changes.push((ea_old, input.edges[ea].clone()));
+        changes.push((eb_old, input.edges[eb].clone()));
     }
+
+    changes
 }
 
-pub fn solve(mut input :SolverInput) -> Result<SolverOutput,String> {
+pub fn solve(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Edge,Edge)>) ,String> {
     let conf = z3::Config::new();
     let ctx = z3::Context::new(&conf);
     let opt = z3::Optimize::new(&ctx);
 
 
     let edges_lt = less_than(&input.nodes, &input.edges);
-    resolve_topbottom(&mut input, &edges_lt);
+    let portref_changes = resolve_topbottom(&mut input, &edges_lt);
 
     let nodes = input.nodes;
     let edges = input.edges;
@@ -614,5 +623,5 @@ pub fn solve(mut input :SolverInput) -> Result<SolverOutput,String> {
         output.edge_levels.push((e.a,e.b,y.0 as f64 / y.1 as f64));
     }
 
-    Ok(output)
+    Ok((output,portref_changes))
 }

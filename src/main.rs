@@ -101,7 +101,7 @@ fn main() {
     }
 
     if verbose { println!("Solving."); }
-    let output = solver::solve(input.unwrap()).expect("Solver failed");
+    let (output,portref_changes) = solver::solve(input.unwrap()).expect("Solver failed");
     if verbose { 
         use std::f64;
         let width = output.node_coords.iter().map(|(_,x,_)| *x).fold(-1./0., f64::max);
@@ -109,6 +109,7 @@ fn main() {
             .chain(  output.edge_levels.iter().map(|(_,_,y)| *y))
             .fold(-1./0.,f64::max);
         println!("Finished solving, size is {} x {}.", width, height);
+        println!("Resolved port ref changes {:?}", portref_changes);
     }
     if debug {
         println!("solution {:?}", output);
@@ -116,8 +117,32 @@ fn main() {
 
 
     if let Some(file) = js_filename {
+        use std::collections::HashMap;
         let oe = orig_edges.expect("Could not find original d-graph edge map.");
         let nnames = node_names.expect("Could not find original node names.");
+
+        let mut node_idxs = HashMap::new();
+        for (k,v) in nnames.iter() {
+                node_idxs.insert(*v,k.clone());
+        }
+
+        use parser::Port;
+        type E = ((String,Port),(String,Port));
+        let portref_tr : HashMap<E,E> =
+            portref_changes.into_iter().map(|(old,new)| {
+                let source = ((node_idxs[&old.a.node].clone(), old.a.port),
+                              (node_idxs[&old.b.node].clone(), old.b.port));
+                let target = ((node_idxs[&new.a.node].clone(), new.a.port),
+                              (node_idxs[&new.b.node].clone(), new.b.port));
+                (source,target)
+            }).collect();
+
+        println!("PORTREF_CHAN GES {:?}", portref_tr);
+
+        use convert::OrigEdges;
+        let oe :OrigEdges = oe.into_iter().map(|(k,v)| (portref_tr.get(&k).cloned().unwrap_or(k), v))
+            .collect();
+
         use std::fs::File;
         use std::io::BufWriter;
         use std::io::Write;

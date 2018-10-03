@@ -6,6 +6,7 @@ use rolling::input::staticinfrastructure::*;
 use solver::SolverInput;
 use std::path::Path;
 use failure::Error;
+use std::collections::VecDeque;
 
 type PortRef = (usize,Port);
 fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,Vec<(usize,usize,f64)>)], gnode :&GNodeData) -> Result<HashMap<usize, f64>, Error>{
@@ -222,12 +223,17 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
 
     let mut nodes = HashMap::new();
     let mut visited = HashSet::new();
+
     // TODO use an actual queue to do breadth-first and get better vertical node placements?
-    let mut queue = vec![boundary];
+    // TODO trying this now:
+    //let mut queue = vec![boundary];
+    let mut queue = VecDeque::new();
+    queue.push_back(boundary);
+
     let mut dists = HashMap::new();
 
     while queue.len() > 0 {
-        let n = queue.pop().unwrap();
+        let n = queue.pop_front().unwrap();
         visited.insert(n);
 
         // Add nodes in down direction
@@ -248,7 +254,7 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
                     dists.insert((a,n), d);
 
                     let opposite_down = inf.nodes[a].other_node;
-                    if !visited.contains(&opposite_down) { queue.push(opposite_down); }
+                    if !visited.contains(&opposite_down) { queue.push_back(opposite_down); }
                 }
             },
 
@@ -262,7 +268,7 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
 
                     for ni in &[left_link.0, right_link.0] {
                         let other_ni = inf.nodes[*ni].other_node;
-                        if !visited.contains(&other_ni) { queue.push(other_ni); }
+                        if !visited.contains(&other_ni) { queue.push_back(other_ni); }
                     }
                 } else {
                     panic!("Not a switch");
@@ -286,7 +292,7 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
                     nodes.insert(upnode, GNode::Linear(n,a));
                     dists.insert((n,upnode), 0.0);
                     dists.insert((upnode, a), d);
-                    if !visited.contains(&a) { queue.push(a);}
+                    if !visited.contains(&a) { queue.push_back(a);}
                 }
             },
             Edges::Switchable(obj) => {
@@ -298,7 +304,7 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
                     dists.insert((upnode, right_link.0), right_link.1);
 
                     for ni in &[left_link.0, right_link.0] {
-                        if !visited.contains(ni) { queue.push(*ni); }
+                        if !visited.contains(ni) { queue.push_back(*ni); }
                     }
                 } else {
                     panic!("Not a switch");
