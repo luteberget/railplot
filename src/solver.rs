@@ -1,6 +1,7 @@
 use z3;
 use parser;
 use parser::{Side, Dir, Port};
+use trans_red::trans_red;
 
 type EdgeRef = usize;
 type NodeRef = usize;
@@ -345,6 +346,11 @@ pub fn solve(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Edge,Edge)>) 
 
     let edges_lt = less_than(&input.nodes, &input.edges);
     let portref_changes = resolve_topbottom(&mut input, &edges_lt);
+    let edges_lt :Vec<EdgePair> = {
+        let mut set : HashSet<(usize,usize)> = edges_lt.into_iter().collect();
+        trans_red(&mut set);
+        set.into_iter().collect()
+    };
 
     let nodes = input.nodes;
     let edges = input.edges;
@@ -562,6 +568,7 @@ pub fn solve(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Edge,Edge)>) 
     }
 
     // Edge Y ordering
+    println!("Edge Y ordering size {:?}", edges_lt.len());
     for (a,b) in edges_lt {
         opt.assert(&edge_data[a].y.le(&edge_data[b].y));
         let short = edge_data[a].shortdown.or(&[&edge_data[b].shortup]);

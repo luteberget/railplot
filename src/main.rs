@@ -11,6 +11,7 @@ mod parser;
 mod solver;
 mod convert;
 mod json;
+mod trans_red;
 
 fn main() {
     use clap::{Arg};
