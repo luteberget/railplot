@@ -6,12 +6,14 @@ extern crate failure;
 #[macro_use] extern crate failure_derive;
 extern crate z3;
 extern crate rolling;
+extern crate svg;
 mod parser_utils;
 mod parser;
 mod solver;
 mod convert;
 mod json;
 mod trans_red;
+mod svg_output;
 
 fn main() {
     use clap::{Arg};
@@ -35,6 +37,12 @@ fn main() {
              .help("Write javascript output data for visualization.")
              .value_name("FILE")
              .takes_value(true))
+        .arg(Arg::with_name("svg")
+             .short("s")
+             .long("svg")
+             .help("Write SVG output data for visualization.")
+             .value_name("FILE")
+             .takes_value(true))
         .arg(Arg::with_name("v")
              .short("v")
              .multiple(true)
@@ -46,6 +54,7 @@ fn main() {
     let debug = matches.occurrences_of("v") > 1;
     let infrastructure_filename = matches.value_of("infrastructure");
     let js_filename = matches.value_of("js");
+    let svg_filename = matches.value_of("svg");
     println!("Convert from infrastructure: {:?}", infrastructure_filename);
 
     let mut input = None;
@@ -153,6 +162,18 @@ fn main() {
         let mut writer = BufWriter::new(&file);
         write!(writer, "{}", string); 
         if verbose { println!("Wrote javascript output to file."); }
+    }
+
+    if let Some(file) = svg_filename {
+        use std::fs::File;
+        use std::io::BufWriter;
+        use std::io::Write;
+        if verbose { println!("Converting to SVG."); }
+        let svg = svg_output::convert(&output).expect("Could not convert to SVG");;
+        let mut file = File::create(file).expect("could not create file");
+        let mut writer = BufWriter::new(&file);
+        write!(writer, "{}", svg); 
+        if verbose { println!("Wrote SVG output to file."); }
     }
 
     if verbose { println!("Finished."); }
