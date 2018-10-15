@@ -1,24 +1,12 @@
-#[macro_use] 
-extern crate serde_json;
 #[macro_use]
 extern crate clap;
 extern crate failure;
-#[macro_use] extern crate failure_derive;
-extern crate z3;
-extern crate rolling;
-extern crate svg;
-mod parser_utils;
-mod parser;
-mod solver;
-mod convert;
-mod json;
-mod trans_red;
-mod svg_output;
-mod convert_pos;
+extern crate vis_rs;
+use vis_rs::*;
 
 fn main() {
     use clap::{Arg};
-    let matches = clap::App::new("vis-rs")
+    let matches = clap::App::new("vis_rs")
         .about("Convert railway graph representation (vis-rs format) to screen coordinates")
         .version(crate_version!())
         .author(crate_authors!())
