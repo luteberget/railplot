@@ -14,6 +14,7 @@ mod convert;
 mod json;
 mod trans_red;
 mod svg_output;
+mod convert_pos;
 
 fn main() {
     use clap::{Arg};

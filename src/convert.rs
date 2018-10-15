@@ -7,6 +7,9 @@ use solver::SolverInput;
 use std::path::Path;
 use failure::Error;
 use std::collections::VecDeque;
+use std::collections::HashSet;
+use std::collections::HashMap;
+use convert_pos;
 
 type PortRef = (usize,Port);
 fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,Vec<(usize,usize,f64)>)], gnode :&GNodeData) -> Result<HashMap<usize, f64>, Error>{
@@ -64,7 +67,16 @@ pub fn convert(s :&Path) -> Result<(String,OrigEdges), Error> {
 
     let mut output = String::new();
     let x = get_infrastructure(s)?;
-    let gnode = gnode(&x)?;
+
+
+    println!("CONVERT-ALTERNATIVE D-GRAPH");
+    let turns = convert_pos::turn_nodes(&x)?;
+    println!("{:?}",turns);
+    println!("OK\n\n");
+    let mut turnsset :HashSet<usize> = HashSet::new();
+    for (a,b) in turns { turnsset.insert(a); turnsset.insert(b); }
+
+    let gnode = gnode(&x,&turnsset)?;
     println!("gnode nodes");
     for (i,n) in gnode.nodes.iter().enumerate() { println!("n{}: {:?}", i, n); }
     let (nodes,edges) = major(&gnode)?;
@@ -81,7 +93,7 @@ pub fn convert(s :&Path) -> Result<(String,OrigEdges), Error> {
             GNode::Switch(Side::Right, Dir::Up, _, _)   => "outrightsw",
             GNode::Switch(Side::Left, Dir::Down, _, _)  => "inleftsw",
             GNode::Switch(Side::Right, Dir::Down, _, _) => "inrightsw",
-            GNode::Turn(_,_) => "vertical",
+            GNode::Turn(_, _,_) => "vertical",
             GNode::Linear(_,_) => panic!("Unexpected node type"),
         };
         writeln!(&mut output, "node {} {} {}", name, typ_, pos[&i]);
@@ -125,7 +137,7 @@ enum GNode {
     Begin(usize),
     End(usize),
     Linear(usize,usize),
-    Turn(usize,usize),
+    Turn(Dir, usize,usize),
     Switch(Side, Dir, usize, (usize,usize)),
 }
 
@@ -180,7 +192,7 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Ve
                 else if last == right { (x, Port::Right, dists) }
                 else { panic!("Inconsistent node network.") }
             }
-            GNode::Turn(a,b) => (x, Port::TopBottom, dists),
+            GNode::Turn(_, a,b) => (x, Port::TopBottom, dists),
             _ => panic!("Inconsistent node network."),
         }
     };
@@ -198,6 +210,10 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Ve
             GNode::Switch(pos, Dir::Down, trunk, (left,right)) => {
                 edges.push(((node_i, Port::Trunk), find_in_port(node_i, trunk)));
             },
+            GNode::Turn(Dir::Down, a, b) => {
+                edges.push(((node_i, Port::TopBottom), find_in_port(node_i, a)));
+                edges.push(((node_i, Port::TopBottom), find_in_port(node_i, b)));
+            }
             _ => {} // These are all the possible up-dir edges from nodes
         }
     }
@@ -208,8 +224,8 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Ve
     Ok((majornodes,edges))
 }
 
-use std::collections::{HashSet, HashMap};
-fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
+fn gnode(inf :&StaticInfrastructure, turns :&HashSet<usize>) -> Result<GNodeData, Error> {
+    println!("INF {:?}", inf);
 
     let boundaries = inf.nodes.iter().enumerate().filter_map(|(i, ref n)| {
         if let Edges::ModelBoundary = n.edges { 
@@ -244,16 +260,14 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
             },
             Edges::Single(a,d) => {
                 // Down direction a -> n | o
-                if visited.contains(&a) { 
-                    nodes.insert(n, GNode::Turn(a, inf.nodes[n].other_node)); 
-                    dists.insert((n, inf.nodes[n].other_node), 0.0);
-                    dists.insert((a,n), d);
+                let opposite_down = inf.nodes[a].other_node;
+                dists.insert((n, inf.nodes[n].other_node), 0.0);
+                dists.insert((a,n), d);
+                if turns.contains(&a) {
+                    nodes.insert(n, GNode::Turn(Dir::Down, a, inf.nodes[n].other_node));
+                    if !visited.contains(&a) { queue.push_back(a); }
                 } else {
                     nodes.insert(n, GNode::Linear(a, inf.nodes[n].other_node));
-                    dists.insert((n, inf.nodes[n].other_node), 0.0);
-                    dists.insert((a,n), d);
-
-                    let opposite_down = inf.nodes[a].other_node;
                     if !visited.contains(&opposite_down) { queue.push_back(opposite_down); }
                 }
             },
@@ -284,16 +298,10 @@ fn gnode(inf :&StaticInfrastructure) -> Result<GNodeData, Error> {
                 dists.insert((n,upnode),0.0);
             },
             Edges::Single(a,d) => {
-                if visited.contains(&inf.nodes[a].other_node) {
-                    nodes.insert(upnode, GNode::Turn(n,a));
-                    dists.insert((n,upnode), 0.0);
-                    dists.insert((upnode, a), d);
-                } else {
-                    nodes.insert(upnode, GNode::Linear(n,a));
-                    dists.insert((n,upnode), 0.0);
-                    dists.insert((upnode, a), d);
-                    if !visited.contains(&a) { queue.push_back(a);}
-                }
+                nodes.insert(upnode, GNode::Linear(n,a));
+                dists.insert((n,upnode), 0.0);
+                dists.insert((upnode, a), d);
+                if !visited.contains(&a) { queue.push_back(a);}
             },
             Edges::Switchable(obj) => {
                 if let StaticObject::Switch { ref left_link, ref right_link, ref branch_side } = inf.objects[obj] {
