@@ -8,7 +8,7 @@ use parser::Port;
 type Pt = (f64,f64);
 type Line = (Pt,Pt);
 
-pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMap<String,usize>) -> Result<String, Error> {
+pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMap<String,usize>) -> Result<serde_json::Value, Error> {
 
     let mut json = json!({});
 
@@ -96,7 +96,8 @@ pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMa
     }
 
 
-    Ok(format!("var edges = {};",serde_json::to_string_pretty(&json).unwrap()))
+    //Ok(format!("var edges = {};",serde_json::to_string_pretty(&json).unwrap()))
+    Ok(json)
 }
 
 fn lerp(a: f64, b :f64, p :f64) -> f64 { (1.0-p)*a + p*b }

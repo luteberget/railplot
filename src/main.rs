@@ -2,6 +2,8 @@
 extern crate clap;
 extern crate failure;
 extern crate vis_rs;
+extern crate rolling;
+extern crate serde_json;
 use vis_rs::*;
 
 fn main() {
@@ -65,7 +67,8 @@ fn main() {
     } else {
         if let Some(filename) = infrastructure_filename {
             if verbose { println!("Converting d-graph \"{}\".",filename); }
-            let (c,oe) = convert::convert(std::path::Path::new(filename)).expect("D-graph conversion failed");
+            let inf = rolling::get_infrastructure(&std::path::Path::new(filename)).expect("Infrastructure parser failed");
+            let (c,oe) = convert::convert(&inf).expect("D-graph conversion failed");
             orig_edges = Some(oe);
             if debug { println!("Converted: {}", c);}
 
@@ -116,38 +119,17 @@ fn main() {
 
 
     if let Some(file) = js_filename {
-        use std::collections::HashMap;
-        let oe = orig_edges.expect("Could not find original d-graph edge map.");
-        let nnames = node_names.expect("Could not find original node names.");
-
-        let mut node_idxs = HashMap::new();
-        for (k,v) in nnames.iter() {
-                node_idxs.insert(*v,k.clone());
-        }
-
-        use parser::Port;
-        type E = ((String,Port),(String,Port));
-        let portref_tr : HashMap<E,E> =
-            portref_changes.into_iter().map(|(old,new)| {
-                let source = ((node_idxs[&old.a.node].clone(), old.a.port),
-                              (node_idxs[&old.b.node].clone(), old.b.port));
-                let target = ((node_idxs[&new.a.node].clone(), new.a.port),
-                              (node_idxs[&new.b.node].clone(), new.b.port));
-                (source,target)
-            }).collect();
-
-        println!("PORTREF_CHAN GES {:?}", portref_tr);
-
-        use convert::OrigEdges;
-        let oe :OrigEdges = oe.into_iter().map(|(k,v)| (portref_tr.get(&k).cloned().unwrap_or(k), v))
-            .collect();
-
         use std::fs::File;
         use std::io::BufWriter;
         use std::io::Write;
-        if verbose { println!("Converting to javascript output."); }
-        let string = json::javascript_output(&output, &oe, &nnames).expect("Could not convert output to javascript format");
         let mut file = File::create(file).expect("could not create file");
+        let json = convert_javascript(Schematic {
+            result: output.clone(),
+            original_edges: orig_edges.unwrap(),
+            node_names: node_names.unwrap(),
+            portref_changes: portref_changes,
+        }).unwrap();
+        let string = format!("var edges = {};",serde_json::to_string_pretty(&json).unwrap());
         let mut writer = BufWriter::new(&file);
         write!(writer, "{}", string); 
         if verbose { println!("Wrote javascript output to file."); }

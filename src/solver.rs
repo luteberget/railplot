@@ -273,7 +273,7 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
     lt
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct SolverOutput {
     pub node_coords: Vec<(String, f64, f64)>,
     // TODO do we need to have names for edges for later consumption?

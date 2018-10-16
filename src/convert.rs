@@ -1,7 +1,6 @@
 // Convert from rolling D-graph to solver input
 //
 
-use rolling::get_infrastructure;
 use rolling::input::staticinfrastructure::*;
 use solver::SolverInput;
 use std::path::Path;
@@ -62,11 +61,11 @@ fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,Vec<(usize,usize,f64)>)], g
 }
 
 pub type OrigEdges = HashMap<((String, Port),(String,Port)),Vec<(String,String,f64)>>;
-pub fn convert(s :&Path) -> Result<(String,OrigEdges), Error> {
+
+pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges), Error> {
     use std::fmt::Write;
 
     let mut output = String::new();
-    let x = get_infrastructure(s)?;
 
 
     println!("CONVERT-ALTERNATIVE D-GRAPH");
