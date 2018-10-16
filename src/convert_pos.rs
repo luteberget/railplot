@@ -81,9 +81,10 @@ pub fn turn_nodes(inf :&StaticInfrastructure) -> Result<Vec<(usize,usize)>, Erro
     let sw_count = sws.iter().map(|x| x.ite(&one_real,&zero_real)).collect::<Vec<z3::Ast>>();
     let a = ctx.from_real(0,1).add(&sw_count.iter().collect::<Vec<&z3::Ast>>());
     //let b = ctx.from_real(0,1).add(&node_up_pos.iter().map(|(_,(_,p))| p).collect::<Vec<&z3::Ast>>());
-    opt.minimize(&a);
+    //opt.minimize(&a);
     //opt.minimize(&b);
     //opt.minimize(&a.mul(&[&ctx.from_real(50000,1)]).add(&[&b]));
+    opt.minimize(&ctx.from_real(0,1).add(&sw_count.iter().collect::<Vec<_>>()));
 
     let status = opt.check();
     if !status { panic!("Solver failed"); }
