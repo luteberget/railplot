@@ -176,7 +176,7 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Ve
     let mut edges = Vec::new();
     let find_in_port = |mut last: usize, mut x:usize| {
         //println!("Find in port: {:?} {:?}", last, x);
-        let mut dists = Vec::new();
+        let mut dists = vec![(last,x,g.dists[&(last,x)])];
         while let GNode::Linear(from,to) = g.nodes[&x] {
             last = x;
             x = to;
