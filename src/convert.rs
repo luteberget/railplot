@@ -178,8 +178,9 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Ve
         //println!("Find in port: {:?} {:?}", last, x);
         let mut dists = vec![(last,x,g.dists[&(last,x)])];
         while let GNode::Linear(from,to) = g.nodes[&x] {
+            let new_x = if last == from { to } else if last == to { from } else { panic!("Linear does not match."); };
             last = x;
-            x = to;
+            x = new_x;
             dists.push((last,x,g.dists[&(last,x)]));
             //println!("Find in port: {:?} ", dists);
         }
