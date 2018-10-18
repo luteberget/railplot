@@ -21,18 +21,19 @@ use std::collections::HashMap;
 pub struct Schematic {
     pub result :solver::SolverOutput,
     pub original_edges :convert::OrigEdges,
+    pub pos_range: convert::PosRange,
     pub node_names :HashMap<String,usize>,
     pub portref_changes :Vec<(solver::Edge,solver::Edge)>,
 }
 
 use rolling::input::staticinfrastructure::*;
 pub fn convert_dgraph(inf :&StaticInfrastructure) -> Result<Schematic, String> {
-    let (visgraph_str, original_edges) = convert::convert(inf).map_err(|e| format!("{:?}", e))?;
+    let (visgraph_str, original_edges, pos_range) = convert::convert(inf).map_err(|e| format!("{:?}", e))?;
     let stmts = parser::read_string(&visgraph_str).map_err(|e| format!("{:?}", e))?;
     let (solver_input, node_names) = solver::convert(stmts)?;
     let (result, portref_changes) = solver::solve(solver_input)?;
 
-    Ok(Schematic { result, original_edges, node_names, portref_changes })
+    Ok(Schematic { result, original_edges, node_names, portref_changes, pos_range })
 }
 
 
@@ -70,7 +71,8 @@ pub fn convert_javascript(s :Schematic) -> Result<serde_json::Value,String> {
         use std::fs::File;
         use std::io::BufWriter;
         use std::io::Write;
-        let json = json::javascript_output(&output, &oe, &nnames).expect("Could not convert output to javascript format");
+        let json = json::lines(&output, &oe, &s.pos_range, &nnames).expect("Could not convert output to javascript format");
+        //let json2 = json::pos(&oe, &s.pos_range).expect("Pos ranges did not match.");
 
         Ok(json)
 }

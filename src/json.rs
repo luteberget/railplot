@@ -1,6 +1,6 @@
 use failure::Error;
 use solver::SolverOutput;
-use convert::OrigEdges;
+use convert::{OrigEdges, PosRange};
 use std::collections::HashMap;
 use serde_json;
 use parser::Port;
@@ -8,7 +8,7 @@ use parser::Port;
 type Pt = (f64,f64);
 type Line = (Pt,Pt);
 
-pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMap<String,usize>) -> Result<serde_json::Value, Error> {
+pub fn lines(o :&SolverOutput, orig :&OrigEdges, pos_range :&PosRange, node_names :&HashMap<String,usize>) -> Result<serde_json::Value, Error> {
 
     let mut json = json!({});
 
@@ -83,10 +83,21 @@ pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMa
 
             let lines : Vec<serde_json::Value> = lines.iter().map(|(s,e)| json!([[s.0,s.1],[e.0,e.1]])).collect();
 
+            let (pos_a, pos_b) = pos_range[&edge_id];
+
+            let pos_start = pos_a + (pos_b-pos_a)*x1_rel;
+            let pos_end = pos_a + (pos_b-pos_a)*x2_rel;
+
+            let node_name = format!("{}-{}", a,b);
+            json.as_object_mut().unwrap().insert(node_name, 
+                    json!({"pos_start":a, "pos_end":b}));
+
             println!("line name {}-{}",a,b);
             json.as_object_mut().unwrap().insert(format!("{}-{}", a, b), 
                  json!({"length": d, 
-                        "lines": lines}));
+                        "lines": lines,
+                        "pos_start": pos_start,
+                        "pos_end": pos_end}));
         }
 
         println!("edge from {:?} to {:?} through y={:?}", (x1,y1),(x2,y2),y);
@@ -95,10 +106,10 @@ pub fn javascript_output(o :&SolverOutput, orig :&OrigEdges, node_names :&HashMa
 
     }
 
-
     //Ok(format!("var edges = {};",serde_json::to_string_pretty(&json).unwrap()))
     Ok(json)
 }
+
 
 fn lerp(a: f64, b :f64, p :f64) -> f64 { (1.0-p)*a + p*b }
 

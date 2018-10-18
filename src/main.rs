@@ -51,6 +51,7 @@ fn main() {
     let mut input = None;
     let mut orig_edges = None;
     let mut node_names = None;
+    let mut pos_range = None;
     if let Some(filename) = filename {
         if verbose { println!("Parsing \"{}\".",filename); }
         let stmts = parser::read_file(std::path::Path::new(filename)).expect("Parser failed");
@@ -68,8 +69,9 @@ fn main() {
         if let Some(filename) = infrastructure_filename {
             if verbose { println!("Converting d-graph \"{}\".",filename); }
             let inf = rolling::get_infrastructure(&std::path::Path::new(filename)).expect("Infrastructure parser failed");
-            let (c,oe) = convert::convert(&inf).expect("D-graph conversion failed");
+            let (c,oe,pos) = convert::convert(&inf).expect("D-graph conversion failed");
             orig_edges = Some(oe);
+            pos_range = Some(pos);
             if debug { println!("Converted: {}", c);}
 
             if verbose { println!("Parsing."); }
@@ -126,6 +128,7 @@ fn main() {
         let json = convert_javascript(Schematic {
             result: output.clone(),
             original_edges: orig_edges.unwrap(),
+            pos_range: pos_range.unwrap(),
             node_names: node_names.unwrap(),
             portref_changes: portref_changes,
         }).unwrap();

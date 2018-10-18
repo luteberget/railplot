@@ -61,8 +61,9 @@ fn mk_pos(nodes :&[usize], edges: &[(PortRef,PortRef,Vec<(usize,usize,f64)>)], g
 }
 
 pub type OrigEdges = HashMap<((String, Port),(String,Port)),Vec<(String,String,f64)>>;
+pub type PosRange = HashMap<((String, Port), (String, Port)), ((f64),(f64))>;
 
-pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges), Error> {
+pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges,PosRange), Error> {
     use std::fmt::Write;
 
     let mut output = String::new();
@@ -115,18 +116,20 @@ pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges), Error> {
     }
 
     let mut original_edges = HashMap::new();
+    let mut pos_range = HashMap::new();
     for ((e1,p1),(e2,p2),d) in &edges {
         let edge_id = ((lookup_names[&e1].clone(), *p1),
                        (lookup_names[&e2].clone(),*p2));
         let d = d.iter().map(|(a,b,d)| 
                              (lookup_names[&a].clone(), 
                               lookup_names[&b].clone(), *d)).collect::<Vec<_>>();
-        original_edges.insert(edge_id,d);
+        original_edges.insert(edge_id.clone(),d);
+        pos_range.insert(edge_id, (pos[&e1], pos[&e2]));
     }
 
     println!("ORIGINAL EDGES {:?}", original_edges);
 
-    Ok((output, original_edges))
+    Ok((output, original_edges, pos_range))
 }
 
 
