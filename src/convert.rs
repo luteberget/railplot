@@ -79,7 +79,7 @@ pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges,PosRange), 
     let gnode = gnode(&x,&turnsset)?;
     println!("gnode nodes");
     for (i,n) in gnode.nodes.iter().enumerate() { println!("n{}: {:?}", i, n); }
-    let (nodes,edges) = major(&gnode)?;
+    let (nodes,edges) = major(&gnode,&x)?;
     let pos = mk_pos(&nodes, &edges, &gnode)?;
 
     let lookup_names = x.node_names.iter().map(|(k,v)| (*v,k.clone())).collect::<HashMap<usize,String>>();
@@ -162,7 +162,7 @@ fn sw_side(x :&SwitchPosition) -> Side {
     }
 }
 
-fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Vec<(usize,usize,f64)>)>), Error> {
+fn major(g: &GNodeData, inf :&StaticInfrastructure) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Vec<(usize,usize,f64)>)>), Error> {
 
     let mut majornodes = g.nodes.iter().filter_map(|(i,ref n)| {
         if let GNode::Linear(_,_) = *n {
@@ -187,6 +187,7 @@ fn major(g: &GNodeData) -> Result<(Vec<usize>,Vec<((usize,Port),(usize,Port), Ve
             dists.push((last,x,g.dists[&(last,x)]));
             //println!("Find in port: {:?} ", dists);
         }
+        dists.retain(|(a,b,d)| inf.nodes[*a].other_node != *b);
         match g.nodes[&x] {
             GNode::End(_) => (x, Port::In, dists),
             GNode::Switch(side, Dir::Up, _, _) => (x, Port::Trunk, dists),

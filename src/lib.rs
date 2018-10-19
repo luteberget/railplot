@@ -37,7 +37,7 @@ pub fn convert_dgraph(inf :&StaticInfrastructure) -> Result<Schematic, String> {
 }
 
 
-pub fn convert_javascript(s :Schematic) -> Result<serde_json::Value,String> {
+pub fn convert_javascript(s :Schematic) -> Result<(serde_json::Value,serde_json::Value),String> {
         use std::collections::HashMap;
         //let oe = orig_edges.ok_or(format!("Could not find original d-graph edge map."));
         //let nnames = node_names.ok_or(format!(("Could not find original node names.");
@@ -71,8 +71,8 @@ pub fn convert_javascript(s :Schematic) -> Result<serde_json::Value,String> {
         use std::fs::File;
         use std::io::BufWriter;
         use std::io::Write;
-        let json = json::lines(&output, &oe, &s.pos_range, &nnames).expect("Could not convert output to javascript format");
+        let (edge_lines,node_tangents) = json::lines(&output, &oe, &s.pos_range, &nnames).expect("Could not convert output to javascript format");
         //let json2 = json::pos(&oe, &s.pos_range).expect("Pos ranges did not match.");
 
-        Ok(json)
+        Ok((edge_lines, node_tangents))
 }

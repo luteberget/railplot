@@ -8,9 +8,13 @@ use parser::Port;
 type Pt = (f64,f64);
 type Line = (Pt,Pt);
 
-pub fn lines(o :&SolverOutput, orig :&OrigEdges, pos_range :&PosRange, node_names :&HashMap<String,usize>) -> Result<serde_json::Value, Error> {
+pub fn lines(o :&SolverOutput, orig :&OrigEdges, pos_range :&PosRange, node_names :&HashMap<String,usize>) -> Result<(serde_json::Value, serde_json::Value), Error> {
+    let rev_vec =  |(a,b):(f64,f64)| (-1.0*a,-1.0*b);
+    let unit_vec = |(a,b):(f64,f64)| { let l = (a*a+b*b).sqrt(); (a/l,b/l) };
+    let line_tangent = |((a,b),(c,d))| unit_vec((c-a,d-b));
 
-    let mut json = json!({});
+    let mut edge_lines = json!({});
+    let mut node_tangents = json!({});
 
     let mut node_idxs = HashMap::new();
     for (k,v) in node_names.into_iter() {
@@ -61,43 +65,59 @@ pub fn lines(o :&SolverOutput, orig :&OrigEdges, pos_range :&PosRange, node_name
         let mut cum :f64 = 0.0;
 
         let num_edges = orig_edges.len();
+        let mut last_tangent = None;
+
+
         for (i,(a,b,d)) in orig_edges.into_iter().enumerate() {
-            if ! (*d > 0.0) { continue; }
-            let x1_rel = cum     / total;
-            let x2_rel = (cum+d) / total;
-            println!("oe:::{:?} {} {}", &lines, x1_rel, x2_rel);
-            let mut lines = get_slice(&lines, x1_rel, x2_rel);
-            println!("res::{:?}", lines);
-            cum += d;
 
-            if top_a {
-                top_a = false;
-                lines.insert(0, ((*x1, y1-1.0),(*x1,y1)));
+            let node_a = format!("{}", a);
+            let node_b = format!("{}", b);
+
+            let tangent_a = rev_vec(last_tangent.unwrap_or((1.0,0.0)));
+            node_tangents.as_object_mut().unwrap().insert(node_a, json!([tangent_a.0, tangent_a.1]));
+
+            if (*d > 0.0) { 
+                let x1_rel = cum     / total;
+                let x2_rel = (cum+d) / total;
+                println!("oe:::{:?} {} {}", &lines, x1_rel, x2_rel);
+                let mut lines = get_slice(&lines, x1_rel, x2_rel);
+                println!("res::{:?}", lines);
+                cum += d;
+
+                if top_a {
+                    top_a = false;
+                    lines.insert(0, ((*x1, y1-1.0),(*x1,y1)));
+                }
+
+                if i == num_edges-1 && top_b {
+                    top_b = false;
+                    lines.push(((*x2, y2),(*x2,y2-1.0)));
+                }
+
+
+                last_tangent = Some(line_tangent(lines[lines.len()-1].clone()));
+                let lines : Vec<serde_json::Value> = lines.iter().map(|(s,e)| json!([[s.0,s.1],[e.0,e.1]])).collect();
+
+                let (pos_a, pos_b) = pos_range[&edge_id];
+
+                let pos_start = pos_a + (pos_b-pos_a)*x1_rel;
+                let pos_end = pos_a + (pos_b-pos_a)*x2_rel;
+
+                let node_name = format!("{}-{}", a,b);
+                edge_lines.as_object_mut().unwrap().insert(node_name, 
+                        json!({"pos_start":a, "pos_end":b}));
+
+                println!("line name {}-{}",a,b);
+                edge_lines.as_object_mut().unwrap().insert(format!("{}-{}", a, b), 
+                     json!({"length": d, 
+                            "lines": lines,
+                            "pos_start": pos_start,
+                            "pos_end": pos_end}));
             }
 
-            if i == num_edges-1 && top_b {
-                top_b = false;
-                lines.push(((*x2, y2),(*x2,y2-1.0)));
-            }
+            let tangent_b = last_tangent.unwrap_or((1.0,0.0));
+            node_tangents.as_object_mut().unwrap().insert(node_b, json!([tangent_b.0, tangent_b.1]));
 
-
-            let lines : Vec<serde_json::Value> = lines.iter().map(|(s,e)| json!([[s.0,s.1],[e.0,e.1]])).collect();
-
-            let (pos_a, pos_b) = pos_range[&edge_id];
-
-            let pos_start = pos_a + (pos_b-pos_a)*x1_rel;
-            let pos_end = pos_a + (pos_b-pos_a)*x2_rel;
-
-            let node_name = format!("{}-{}", a,b);
-            json.as_object_mut().unwrap().insert(node_name, 
-                    json!({"pos_start":a, "pos_end":b}));
-
-            println!("line name {}-{}",a,b);
-            json.as_object_mut().unwrap().insert(format!("{}-{}", a, b), 
-                 json!({"length": d, 
-                        "lines": lines,
-                        "pos_start": pos_start,
-                        "pos_end": pos_end}));
         }
 
         println!("edge from {:?} to {:?} through y={:?}", (x1,y1),(x2,y2),y);
@@ -107,7 +127,7 @@ pub fn lines(o :&SolverOutput, orig :&OrigEdges, pos_range :&PosRange, node_name
     }
 
     //Ok(format!("var edges = {};",serde_json::to_string_pretty(&json).unwrap()))
-    Ok(json)
+    Ok((edge_lines,node_tangents))
 }
 
 
