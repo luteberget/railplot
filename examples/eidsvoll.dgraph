@@ -1,0 +1,213 @@
+node gardermobanen-n0b
+node n1a-n1b(sight sig0 200)
+node n2a(exit sec0)-n2b(enter sec0)
+node n3a(signal sig1)-n3b
+node n4a-n4b(signal sig0)
+node n5a(enter sec0, exit sec1)-n5b(exit sec0, enter sec1)
+node n6a(sight sig1 250)-n6b
+node n7a(enter sec1, exit sec2)-n7b(exit sec1, enter sec2)
+node n8a-n8b
+node n9a-n9b
+node n10a-n10b
+node n11a(enter sec2, exit sec3)-n11b(exit sec2, enter sec3)
+node n12a(signal sig2)-n12b
+node n13a(enter sec3, exit sec4)-n13b(exit sec3, enter sec4)
+node n14a(sight sig2 250)-n14b
+node n15a-n15b(sight sig3 250)
+node n16a-n16b(signal sig3)
+node n17a(enter sec4, exit sec5)-n17b(exit sec4, enter sec5)
+node n18a(enter sec5, exit sec6)-n18b(exit sec5, enter sec6)
+node n19a-n19b
+node n20a-n20b
+node n21a-n21b
+node n22a(enter sec6, exit sec7)-n22b(exit sec6, enter sec7)
+node n23a(enter sec7, exit sec8)-n23b(exit sec7, enter sec8)
+node n24a-n24b
+node n25a-n25b
+node n26a-n26b
+node n27a(signal sig4)-n27b
+node n28a(enter sec8, exit sec9)-n28b(exit sec8, enter sec9)
+node n29a(enter sec9)-n29b(exit sec9)
+node n30a(sight sig4 173)-n30b
+node n31a-dovrebanen
+node n32a-n32b
+node n33a(enter sec2, exit sec10)-n33b(exit sec2, enter sec10)
+node n34a-n34b
+node n35a-n35b
+node n36a-n36b
+node n37a(signal sig5)-n37b
+node n38a(enter sec10, exit sec11)-n38b(exit sec10, enter sec11)
+node n39a(sight sig5 250)-n39b
+node n40a-n40b(sight sig6 250)
+node n41a-n41b(signal sig6)
+node n42a(enter sec11, exit sec12)-n42b(exit sec11, enter sec12)
+node n43a-n43b
+node n44a-n44b
+node n45a-n45b
+node n46a(enter sec12, exit sec13)-n46b(exit sec12, enter sec13)
+node n47a-n47b
+node n48a-n48b
+node n49a-n49b
+node n50a(enter sec13, exit sec14)-n50b(exit sec13, enter sec14)
+node n51a-n51b
+node n52a-n52b
+node n53a-n53b
+node n54a(enter sec14, exit sec8)-n54b(exit sec14, enter sec8)
+node n55a-n55b
+node n56a-n56b
+node n57a(enter sec15, exit sec16)-n57b(exit sec15, enter sec16)
+node n58a-n58b
+node n59a-n59b
+node n60a-n60b
+node n61a-n61b
+node n62a-n62b
+node n63a-n63b
+node n64a-n64b
+node n65a-n65b
+node n66a(enter sec6, exit sec16)-n66b(exit sec6, enter sec16)
+node n67a-n67b
+node n68a-n68b
+node n69a(enter sec13, exit sec16)-n69b(exit sec13, enter sec16)
+node n70a-n70b
+node n71a-n71b
+node n72a(enter sec10, exit sec17)-n72b(exit sec10, enter sec17)
+node n73a(enter sec17, exit sec18)-n73b(exit sec17, enter sec18)
+node n74a-n74b
+node n75a-n75b
+node n76a-n76b
+node n77a-n77b(sight sig8 250)
+node n78a(signal sig7)-n78b
+node n79a(enter sec18, exit sec19)-n79b(exit sec18, enter sec19)
+node n80a-n80b(signal sig8)
+node n81a(enter sec19, exit sec20)-n81b(exit sec19, enter sec20)
+node n82a(sight sig7 250)-n82b
+node n83a(enter sec20, exit sec12)-n83b(exit sec20, enter sec12)
+node n84a-n84b
+node hovedbanen-n85b
+node n86a-n86b(sight sig10 250)
+node n87a(exit sec21)-n87b(enter sec21)
+node n88a-n88b(signal sig10)
+node n89a(enter sec21, exit sec22)-n89b(exit sec21, enter sec22)
+node n90a(enter sec22, exit sec23)-n90b(exit sec22, enter sec23)
+node n91a-n91b
+node n92a-n92b
+node n93a-n93b
+node n94a(signal sig9)-n94b
+node n95a(enter sec23, exit sec24)-n95b(exit sec23, enter sec24)
+node n96a(sight sig9 250)-n96b
+node n97a-n97b(sight sig11 250)
+node n98a-n98b(signal sig11)
+node n99a(enter sec24, exit sec14)-n99b(exit sec24, enter sec14)
+node n100a-n100b
+node n101a-n101b
+node n102a(signal sig12)-n102b
+node n103a(enter sec23, exit sec25)-n103b(exit sec23, enter sec25)
+node n104a(sight sig12 250)-n104b
+node n105a-n105b(sight sig13 250)
+node n106a-n106b(signal sig13)
+node n107a(enter sec25, exit sec18)-n107b(exit sec25, enter sec18)
+node n108a-n108b
+boundary gardermobanen
+linear n0b-n1a 0.000001
+linear n1b-n2a 92.999999
+linear n2b-n3a 106
+linear n3b-n4a 1
+linear n4b-n5a 0
+linear n5b-n6a 249
+linear n6b-n7a 491
+switch sw0 right n8b-(n10a 0, n9a 0)
+linear n7b-n8a 50
+linear n10b-n11a 128
+linear n11b-n12a 217
+linear n12b-n13a 1
+linear n13b-n14a 249
+linear n14b-n15a 117
+linear n15b-n16a 250
+linear n16b-n17a 0
+linear n17b-n18a 200
+switch sw2 right n19b-(n21a 0, n20a 0)
+linear n18b-n19a 16
+linear n21b-n22a 156
+linear n22b-n23a 369
+switch sw1 left n24a-(n25a 0, n26a 0)
+linear n23b-n26b 116
+linear n24b-n27a 147
+linear n27b-n28a 0
+linear n28b-n29a 60
+linear n29b-n30a 112.99999900000012
+linear n30b-n31a 0.000000999999883788405
+boundary dovrebanen
+linear n32b-n33a 130
+switch sw4 right n34b-(n36a 0, n35a 0)
+linear n33b-n34a 68
+linear n36b-n37a 161
+linear n37b-n38a 0
+linear n38b-n39a 250
+linear n39b-n40a 116
+linear n40b-n41a 250
+linear n41b-n42a 1
+switch sw5 left n43a-(n44a 0, n45a 0)
+linear n42b-n45b 349
+linear n43b-n46a 19
+switch sw3 left n47b-(n48a 0, n49a 0)
+linear n46b-n47a 23
+linear n49b-n50a 90
+switch sw6 left n51a-(n52a 0, n53a 0)
+linear n50b-n53b 171
+linear n51b-n54a 105
+linear n54b-n55a 112
+linear n56b-n57a 263
+switch sw7 right n58a-(n60a 0, n59a 0)
+linear n57b-n60b 126
+switch sw8 left n61a-(n62a 0, n63a 0)
+linear n58b-n63b 84
+linear n61b-n64a 90
+linear n65b-n66a 114
+linear n66b-n67a 142
+linear n68b-n69a 73
+linear n69b-n70a 93
+linear n71b-n72a 103
+linear n72b-n73a 290
+switch sw9 left n74a-(n75a 0, n76a 0)
+linear n73b-n76b 116
+linear n74b-n77a 20
+linear n77b-n78a 43
+linear n78b-n79a 0
+linear n79b-n80a 207
+linear n80b-n81a 0
+linear n81b-n82a 43
+linear n82b-n83a 227
+linear n83b-n84a 85
+boundary hovedbanen
+linear n85b-n86a 130
+linear n86b-n87a 92
+linear n87b-n88a 158
+linear n88b-n89a 0
+linear n89b-n90a 274
+switch sw10 left n91b-(n92a 0, n93a 0)
+linear n90b-n91a 65
+linear n93b-n94a 233
+linear n94b-n95a 0
+linear n95b-n96a 250
+linear n96b-n97a 1578
+linear n97b-n98a 250
+linear n98b-n99a 0
+linear n99b-n100a 145
+linear n101b-n102a 297
+linear n102b-n103a 0
+linear n103b-n104a 250
+linear n104b-n105a 538
+linear n105b-n106a 250
+linear n106b-n107a 0
+linear n107b-n108a 141
+linear n67b-n59b 0
+linear n52b-n100b 0
+linear n55b-n25b 0
+linear n35b-n71a 0
+linear n48b-n68a 0
+linear n44b-n84b 0
+linear n65a-n20b 0
+linear n92b-n101a 0
+linear n9b-n32a 0
+linear n62b-n70b 0
+linear n108b-n75b 0
