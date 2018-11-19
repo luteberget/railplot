@@ -22,6 +22,12 @@ fn main() {
              .help("Convert rolling D-graph format to vis-rs format")
              .value_name("FILE")
              .takes_value(true))
+        .arg(Arg::with_name("outgraph")
+             .short("g")
+             .long("outgraph")
+             .help("Write vis-rs  graph format to file (when reading infrastructure with the -i flag")
+             .value_name("FILE")
+             .takes_value(true))
         .arg(Arg::with_name("js")
              .short("j")
              .long("js")
@@ -46,6 +52,7 @@ fn main() {
     let infrastructure_filename = matches.value_of("infrastructure");
     let js_filename = matches.value_of("js");
     let svg_filename = matches.value_of("svg");
+    let outgraph_filename = matches.value_of("outgraph");
     println!("Convert from infrastructure: {:?}", infrastructure_filename);
 
     let mut input = None;
@@ -70,6 +77,17 @@ fn main() {
             if verbose { println!("Converting d-graph \"{}\".",filename); }
             let inf = rolling::get_infrastructure(&std::path::Path::new(filename)).expect("Infrastructure parser failed");
             let (c,oe,pos) = convert::convert(&inf).expect("D-graph conversion failed");
+
+            if let Some(file) = outgraph_filename {
+                use std::fs::File;
+                use std::io::BufWriter;
+                use std::io::Write;
+                let mut file = File::create(file).expect("could not create file");
+                let mut writer = BufWriter::new(&file);
+                write!(writer, "{}", c);
+                if verbose { println!("Wrote vis-rs graph format output to file."); }
+            }
+
             orig_edges = Some(oe);
             pos_range = Some(pos);
             if debug { println!("Converted: {}", c);}
