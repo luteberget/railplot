@@ -125,14 +125,14 @@ fn main() {
         use std::io::BufWriter;
         use std::io::Write;
         let mut file = File::create(file).expect("could not create file");
-        let json = convert_javascript(Schematic {
+        let (edges,_) = convert_javascript(Schematic {
             result: output.clone(),
             original_edges: orig_edges.unwrap(),
             pos_range: pos_range.unwrap(),
             node_names: node_names.unwrap(),
             portref_changes: portref_changes,
         }).unwrap();
-        let string = format!("var edges = {};",serde_json::to_string_pretty(&json).unwrap());
+        let string = format!("var edges = {};",serde_json::to_string_pretty(&edges).unwrap());
         let mut writer = BufWriter::new(&file);
         write!(writer, "{}", string); 
         if verbose { println!("Wrote javascript output to file."); }
