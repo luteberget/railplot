@@ -1,0 +1,505 @@
+    <?xml version="1.0" encoding="UTF-8"?>
+<railml xmlns="https://www.railml.org/schemas/2018"
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.railml.org/schemas/2018 ../schema/railML.xsd"
+        version="2.4">
+        
+       
+          <infrastructure id="inf01">   <tracks> 
+<track id="tr1" name="Track 1">
+<trackTopology>
+<trackBegin pos="0">
+<openEnd id="node2" />
+</trackBegin>
+<trackEnd pos="2000">
+<openEnd id="node1" />
+</trackEnd>
+<connections>
+<switch id="sw1" name="Spv1" dir="down" pos="100">
+<connection course="left" orientation="incoming" id="swconn1" ref="swconn1ref" /></switch>
+<switch id="sw2" name="Spv2" dir="up" pos="150">
+<connection course="right" orientation="outgoing" id="swconn2" ref="swconn2ref" /></switch>
+<switch id="sw3" name="Spv3" dir="up" pos="500">
+<connection course="right" orientation="outgoing" id="swconn3" ref="swconn3ref" /></switch>
+<switch id="sw4" name="Spv4" dir="down" pos="1000">
+<connection course="left" orientation="incoming" id="swconn4" ref="swconn4ref" /></switch>
+<switch id="sw6" name="Spv6" dir="down" pos="1850">
+<connection course="left" orientation="incoming" id="swconn6" ref="swconn6ref" /></switch>
+<switch id="sw7" name="Spv7" dir="up" pos="1900">
+<connection course="right" orientation="outgoing" id="swconn7" ref="swconn7ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr2" name="Siding 1">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="c1" ref="c1ref"/>
+</trackBegin>
+<trackEnd pos="50">
+<connection id="swconn1ref" ref="swconn1"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr3" name="Siding 2">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn2ref" ref="swconn2"/>
+</trackBegin>
+<trackEnd pos="50">
+<connection id="c2" ref="c2ref"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr4" name="Loop 1">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn3ref" ref="swconn3"/>
+</trackBegin>
+<trackEnd pos="500">
+<connection id="swconn4ref" ref="swconn4"/>
+</trackEnd>
+<connections>
+<switch id="sw5" name="Spv5" dir="up" pos="50">
+<connection course="right" orientation="outgoing" id="swconn5" ref="swconn5ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr5" name="Siding 3">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn5ref" ref="swconn5"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="bc2" ref="bc2ref"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr6" name="Siding 4">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="tc1" ref="tc1ref"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn6ref" ref="swconn6"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr7" name="Siding 5">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn7ref" ref="swconn7"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="tc2" ref="tc2ref"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr8" name="Track 2">
+<trackTopology>
+<trackBegin pos="0">
+<openEnd id="node4" />
+</trackBegin>
+<trackEnd pos="2000">
+<openEnd id="node3" />
+</trackEnd>
+<connections>
+<switch id="sw8" name="Spv8" dir="up" pos="1800">
+<connection course="left" orientation="outgoing" id="swconn8" ref="swconn8ref" /></switch>
+<switch id="sw9" name="Spv9" dir="down" pos="1950">
+<connection course="right" orientation="incoming" id="swconn9" ref="swconn9ref" /></switch>
+<switch id="sw10" name="Spv10" dir="up" pos="900">
+<connection course="right" orientation="outgoing" id="swconn10" ref="swconn10ref" /></switch>
+<switch id="sw11" name="Spv11" dir="up" pos="50">
+<connection course="left" orientation="outgoing" id="swconn11" ref="swconn11ref" /></switch>
+<switch id="sw12" name="Spv12" dir="down" pos="200">
+<connection course="right" orientation="incoming" id="swconn12" ref="swconn12ref" /></switch>
+<switch id="sw13" name="Spv13" dir="up" pos="350">
+<connection course="right" orientation="outgoing" id="swconn13" ref="swconn13ref" /></switch>
+<switch id="sw14" name="Spv14" dir="up" pos="500">
+<connection course="left" orientation="outgoing" id="swconn14" ref="swconn14ref" /></switch>
+<switch id="sw15" name="Spv15" dir="down" pos="1000">
+<connection course="right" orientation="incoming" id="swconn15" ref="swconn15ref" /></switch>
+<switch id="sw18" name="Spv18" dir="down" pos="1300">
+<connection course="left" orientation="incoming" id="swconn18" ref="swconn18ref" /></switch>
+<switch id="sw19" name="Spv19" dir="up" pos="700">
+<connection course="left" orientation="outgoing" id="swconn19" ref="swconn19ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr9" name="Siding 6">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn8ref" ref="swconn8"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="tc1ref" ref="tc1"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr10" name="Siding 7">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="tc2ref" ref="tc2"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn9ref" ref="swconn9"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr11" name="Siding 8">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn10ref" ref="swconn10"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="bb" ref="bbref"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr12" name="Siding 9">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn11ref" ref="swconn11"/>
+</trackBegin>
+<trackEnd pos="50">
+<connection id="c1ref" ref="c1"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr13" name="Siding 10">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="c2ref" ref="c2"/>
+</trackBegin>
+<trackEnd pos="50">
+<connection id="swconn12ref" ref="swconn12"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr14" name="Siding 11">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn13ref" ref="swconn13"/>
+</trackBegin>
+<trackEnd pos="50">
+<connection id="c3" ref="c3ref"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr15" name="Loop 2">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn14ref" ref="swconn14"/>
+</trackBegin>
+<trackEnd pos="500">
+<connection id="swconn15ref" ref="swconn15"/>
+</trackEnd>
+<connections>
+<switch id="sw16" name="Spv16" dir="down" pos="100">
+<connection course="right" orientation="incoming" id="swconn16" ref="swconn16ref" /></switch>
+<switch id="sw17" name="Spv17" dir="down" pos="250">
+<connection course="left" orientation="incoming" id="swconn17" ref="swconn17ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr16" name="Siding 12">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="bc2ref" ref="bc2"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn16ref" ref="swconn16"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr17" name="Siding 13">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="bc1" ref="bc1ref"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn17ref" ref="swconn17"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr18" name="Siding 14">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="uubb" ref="uubbref"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn18ref" ref="swconn18"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr19" name="Siding 15">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn19ref" ref="swconn19"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="bc1ref" ref="bc1"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr20" name="Track 3">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="uuba" ref="uubaref"/>
+</trackBegin>
+<trackEnd pos="500">
+<connection id="uubbref" ref="uubb"/>
+</trackEnd>
+<connections>
+<switch id="sw20" name="Spv20" dir="down" pos="300">
+<connection course="right" orientation="incoming" id="swconn20" ref="swconn20ref" /></switch>
+<switch id="sw21" name="Spv21" dir="up" pos="50">
+<connection course="right" orientation="outgoing" id="swconn21" ref="swconn21ref" /></switch>
+<switch id="sw22" name="Spv22" dir="down" pos="250">
+<connection course="left" orientation="incoming" id="swconn22" ref="swconn22ref" /></switch>
+<switch id="sw23" name="Spv23" dir="up" pos="450">
+<connection course="right" orientation="outgoing" id="swconn23" ref="swconn23ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr21" name="Siding 16">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="ubend" ref="ubendref"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn20ref" ref="swconn20"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr22" name="Loop 3">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn21ref" ref="swconn21"/>
+</trackBegin>
+<trackEnd pos="200">
+<connection id="swconn22ref" ref="swconn22"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr23" name="Siding 17">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn23ref" ref="swconn23"/>
+</trackBegin>
+<trackEnd pos="50">
+<bufferStop />
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr24" name="Track 4">
+<trackTopology>
+<trackBegin pos="0">
+<openEnd id="node5" />
+</trackBegin>
+<trackEnd pos="1500">
+<connection id="ubendref" ref="ubend"/>
+</trackEnd>
+<connections>
+<switch id="sw24" name="Spv24" dir="up" pos="600">
+<connection course="right" orientation="outgoing" id="swconn24" ref="swconn24ref" /></switch>
+<switch id="sw25" name="Spv25" dir="down" pos="400">
+<connection course="right" orientation="incoming" id="swconn25" ref="swconn25ref" /></switch>
+<switch id="sw26" name="Spv26" dir="down" pos="900">
+<connection course="right" orientation="incoming" id="swconn26" ref="swconn26ref" /></switch>
+<switch id="sw27" name="Spv27" dir="up" pos="500">
+<connection course="right" orientation="outgoing" id="swconn27" ref="swconn27ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr25" name="Siding 18">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn24ref" ref="swconn24"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="uubaref" ref="uuba"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr26" name="Siding 19">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="c3ref" ref="c3"/>
+</trackBegin>
+<trackEnd pos="50">
+<connection id="swconn25ref" ref="swconn25"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr27" name="Siding 20">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="bbref" ref="bb"/>
+</trackBegin>
+<trackEnd pos="25">
+<connection id="swconn26ref" ref="swconn26"/>
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr28" name="Siding 21">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn27ref" ref="swconn27"/>
+</trackBegin>
+<trackEnd pos="550">
+<bufferStop />
+</trackEnd>
+<connections>
+<switch id="sw28" name="Spv28" dir="up" pos="50">
+<connection course="left" orientation="outgoing" id="swconn28" ref="swconn28ref" /></switch>
+<switch id="sw33" name="Spv33" dir="up" pos="100">
+<connection course="left" orientation="outgoing" id="swconn33" ref="swconn33ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr29" name="Siding 22">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn28ref" ref="swconn28"/>
+</trackBegin>
+<trackEnd pos="500">
+<bufferStop />
+</trackEnd>
+<connections>
+<switch id="sw29" name="Spv29" dir="up" pos="450">
+<connection course="left" orientation="outgoing" id="swconn29" ref="swconn29ref" /></switch>
+<switch id="sw30" name="Spv30" dir="up" pos="50">
+<connection course="right" orientation="outgoing" id="swconn30" ref="swconn30ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr30" name="Siding 23">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn29ref" ref="swconn29"/>
+</trackBegin>
+<trackEnd pos="50">
+<bufferStop />
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr31" name="Siding 24">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn30ref" ref="swconn30"/>
+</trackBegin>
+<trackEnd pos="400">
+<bufferStop />
+</trackEnd>
+<connections>
+<switch id="sw31" name="Spv31" dir="up" pos="50">
+<connection course="right" orientation="outgoing" id="swconn31" ref="swconn31ref" /></switch>
+<switch id="sw32" name="Spv32" dir="up" pos="100">
+<connection course="right" orientation="outgoing" id="swconn32" ref="swconn32ref" /></switch>
+</connections>
+</trackTopology>
+</track>
+
+
+<track id="tr32" name="Siding 25">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn31ref" ref="swconn31"/>
+</trackBegin>
+<trackEnd pos="350">
+<bufferStop />
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr33" name="Siding 26">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn32ref" ref="swconn32"/>
+</trackBegin>
+<trackEnd pos="300">
+<bufferStop />
+</trackEnd>
+</trackTopology>
+</track>
+
+
+<track id="tr34" name="Siding 27">
+<trackTopology>
+<trackBegin pos="0">
+<connection id="swconn33ref" ref="swconn33"/>
+</trackBegin>
+<trackEnd pos="400">
+<bufferStop />
+</trackEnd>
+</trackTopology>
+</track>
+
+
+
+  </tracks> 
+  </infrastructure> 
+  </railml> 

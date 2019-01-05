@@ -123,7 +123,7 @@ fn main() {
     }
 
     if verbose { println!("Solving."); }
-    let (output,portref_changes) = solver::solve(input.unwrap()).expect("Solver failed");
+    let (output,portref_changes) = solver::solve_difftheory(input.unwrap()).expect("Solver failed");
     if verbose { 
         use std::f64;
         let width = output.node_coords.iter().map(|(_,x,_)| *x).fold(-1./0., f64::max);

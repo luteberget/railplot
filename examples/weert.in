@@ -1,0 +1,102 @@
+node node2 begin 50
+node n1a inleftsw 150
+node n4b outrightsw 200
+node n7b outrightsw 400
+node n10a inleftsw 900
+node n13a inleftsw 1750
+node n16b outrightsw 1800
+node node1 end 1900
+node n25b outrightsw 450
+node node4 begin 0
+node n36b outleftsw 50
+node n39a inrightsw 200
+node n42b outrightsw 350
+node n45b outleftsw 500
+node n48b outleftsw 600
+node n51b outrightsw 800
+node n54a inrightsw 900
+node n57a inleftsw 1200
+node n60b outleftsw 1700
+node n63a inrightsw 1850
+node node3 end 1900
+node n80a inrightsw 500
+node n83a inleftsw 650
+node n96b outrightsw 725
+node n99a inleftsw 925
+node n102a inrightsw 975
+node n105b outrightsw 1125
+node n114b end 1175
+node node5 begin 50
+node n116a inrightsw 450
+node n119b outrightsw 550
+node n122b outrightsw 650
+node n125a inrightsw 950
+node n136b outleftsw 600
+node n139b outleftsw 610
+node n142b end 1100
+node n144b outrightsw 651
+node n147b outleftsw 1050
+node n150b end 1100
+node n152b end 1100
+node n154b outrightsw 700
+node n157b outrightsw 750
+node n160b end 1050
+node n162b end 1050
+node n164b end 1050
+node n166b end 1050
+edge node2.out n1a.right
+edge n1a.trunk n4b.trunk
+edge n4b.left n7b.trunk
+edge n4b.right n39a.right
+edge n7b.left n10a.right
+edge n7b.right n25b.trunk
+edge n10a.trunk n13a.right
+edge n13a.trunk n16b.trunk
+edge n16b.left node1.in
+edge n16b.right n63a.right
+edge n25b.left n10a.left
+edge n25b.right n80a.right
+edge node4.out n36b.trunk
+edge n36b.left n1a.left
+edge n36b.right n39a.left
+edge n39a.trunk n42b.trunk
+edge n42b.left n45b.trunk
+edge n42b.right n116a.right
+edge n45b.left n80a.left
+edge n45b.right n48b.trunk
+edge n48b.left n83a.left
+edge n48b.right n51b.trunk
+edge n51b.left n54a.left
+edge n51b.right n125a.right
+edge n54a.trunk n57a.right
+edge n57a.trunk n60b.trunk
+edge n60b.left n13a.left
+edge n60b.right n63a.left
+edge n63a.trunk node3.in
+edge n80a.trunk n83a.right
+edge n83a.trunk n54a.right
+edge n96b.left n99a.right
+edge n96b.right n99a.left
+edge n99a.trunk n102a.left
+edge n102a.trunk n105b.trunk
+edge n105b.left n57a.left
+edge n105b.right n114b.in
+edge node5.out n116a.left
+edge n116a.trunk n119b.trunk
+edge n119b.left n122b.trunk
+edge n119b.right n136b.trunk
+edge n122b.left n125a.left
+edge n122b.right n96b.trunk
+edge n125a.trunk n102a.right
+edge n136b.left n144b.trunk
+edge n136b.right n139b.trunk
+edge n139b.left n166b.in
+edge n139b.right n142b.in
+edge n144b.left n147b.trunk
+edge n144b.right n154b.trunk
+edge n147b.left n152b.in
+edge n147b.right n150b.in
+edge n154b.left n157b.trunk
+edge n154b.right n162b.in
+edge n157b.left n160b.in
+edge n157b.right n164b.in

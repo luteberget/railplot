@@ -5,6 +5,7 @@ extern crate failure;
 extern crate z3;
 extern crate rolling;
 extern crate svg;
+extern crate diffsolver;
 
 pub mod parser_utils;
 pub mod parser;
@@ -31,7 +32,7 @@ pub fn convert_dgraph(inf :&StaticInfrastructure) -> Result<Schematic, String> {
     let (visgraph_str, original_edges, pos_range) = convert::convert(inf).map_err(|e| format!("{:?}", e))?;
     let stmts = parser::read_string(&visgraph_str).map_err(|e| format!("{:?}", e))?;
     let (solver_input, node_names) = solver::convert(stmts)?;
-    let (result, portref_changes) = solver::solve(solver_input)?;
+    let (result, portref_changes) = solver::solve_difftheory(solver_input)?;
 
     Ok(Schematic { result, original_edges, node_names, portref_changes, pos_range })
 }

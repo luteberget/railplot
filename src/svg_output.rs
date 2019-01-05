@@ -85,7 +85,14 @@ pub fn convert(model :&SolverOutput) -> Result<String, String> {
             .set("r",7.5)
             .set("fill", "red");
 
+        let mut t = svg::node::element::Text::new()
+            .set("x",tr_x(*x))
+            .set("y",tr_y(*y));
+        use svg::Node;
+        t.append(svg::node::Text::new(name.clone()));
+
         document = document.add(c);
+        document = document.add(t);
     }
 
     let mut s :Vec<u8>= Vec::new();
