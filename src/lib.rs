@@ -5,7 +5,11 @@ extern crate failure;
 extern crate z3;
 extern crate rolling;
 extern crate svg;
+extern crate itertools;
 extern crate diffsolver;
+extern crate lp_modeler;
+extern crate ordered_float;
+extern crate disjoint_sets;
 
 pub mod parser_utils;
 pub mod parser;
@@ -14,7 +18,9 @@ pub mod convert;
 pub mod json;
 pub mod trans_red;
 pub mod svg_output;
+pub mod tikz_output;
 pub mod convert_pos;
+pub mod symbols;
 
 use std::collections::HashMap;
 

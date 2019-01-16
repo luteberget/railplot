@@ -70,7 +70,8 @@ pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges,PosRange), 
 
 
     println!("CONVERT-ALTERNATIVE D-GRAPH");
-    let turns = convert_pos::turn_nodes(&x)?;
+    //let turns = convert_pos::turn_nodes(&x)?;
+    let turns = Vec::new();
     println!("{:?}",turns);
     println!("OK\n\n");
     let mut turnsset :HashSet<usize> = HashSet::new();

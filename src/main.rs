@@ -40,6 +40,12 @@ fn main() {
              .help("Write SVG output data for visualization.")
              .value_name("FILE")
              .takes_value(true))
+        .arg(Arg::with_name("tikz")
+             .short("z")
+             .long("tikz")
+             .help("Write TikZ output data for visualization.")
+             .value_name("FILE")
+             .takes_value(true))
         .arg(Arg::with_name("v")
              .short("v")
              .multiple(true)
@@ -52,6 +58,7 @@ fn main() {
     let infrastructure_filename = matches.value_of("infrastructure");
     let js_filename = matches.value_of("js");
     let svg_filename = matches.value_of("svg");
+    let tikz_filename = matches.value_of("tikz");
     let outgraph_filename = matches.value_of("outgraph");
     println!("Convert from infrastructure: {:?}", infrastructure_filename);
 
@@ -122,13 +129,14 @@ fn main() {
         }
     }
 
+    let input2 = input.clone();
     if verbose { println!("Solving."); }
     let (output,portref_changes) = solver::solve_difftheory(input.unwrap()).expect("Solver failed");
     if verbose { 
         use std::f64;
-        let width = output.node_coords.iter().map(|(_,x,_)| *x).fold(-1./0., f64::max);
-        let height = output.node_coords.iter().map(|(_,_,y)| *y)
-            .chain(  output.edge_levels.iter().map(|(_,_,y)| *y))
+        let width = output.tracks.node_coords.iter().map(|(_,x,_)| *x).fold(-1./0., f64::max);
+        let height = output.tracks.node_coords.iter().map(|(_,_,y)| *y)
+            .chain(  output.tracks.edge_levels.iter().map(|(_,_,y)| *y))
             .fold(-1./0.,f64::max);
         println!("Finished solving, size is {} x {}.", width, height);
         println!("Resolved port ref changes {:?}", portref_changes);
@@ -166,6 +174,18 @@ fn main() {
         let mut writer = BufWriter::new(&file);
         write!(writer, "{}", svg); 
         if verbose { println!("Wrote SVG output to file."); }
+    }
+
+    if let Some(file) = tikz_filename {
+        use std::fs::File;
+        use std::io::BufWriter;
+        use std::io::Write;
+        if verbose { println!("Converting to TikZ."); }
+        let tikz = tikz_output::convert(&input2.unwrap(), &output).expect("Could not convert to SVG");;
+        let mut file = File::create(file).expect("could not create file");
+        let mut writer = BufWriter::new(&file);
+        write!(writer, "{}", tikz); 
+        if verbose { println!("Wrote TikZ output to file."); }
     }
 
     if verbose { println!("Finished."); }

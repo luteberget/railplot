@@ -24,12 +24,12 @@ pub fn lines(o :&SolverOutput, orig :&OrigEdges, pos_range :&PosRange, node_name
     // Each edge should have a list of nodes and distances 
     // example: [("n1a-n1b",200.0),...]
 
-    for (p1,p2,y) in &o.edge_levels {
+    for (p1,p2,y) in &o.tracks.edge_levels {
         //println!("\n\nEDGE");
-        let (_,x1,y1) = &o.node_coords[p1.node];
-        let (_,x2,y2) = &o.node_coords[p2.node];
-        //println!("{:?} -- {:?}", &o.node_coords[p1.node],
-        //                         &o.node_coords[p2.node]);
+        let (_,x1,y1) = &o.tracks.node_coords[p1.node];
+        let (_,x2,y2) = &o.tracks.node_coords[p2.node];
+        //println!("{:?} -- {:?}", &o.tracks.node_coords[p1.node],
+        //                         &o.tracks.node_coords[p2.node]);
 
         let (y1,mut top_a) = if let Port::Top = p1.port { (y1 + 1.0, true) } else { (*y1, false) };
         let (y2,mut top_b) = if let Port::Top = p2.port { (y2 + 1.0, true) } else { (*y2, false) };

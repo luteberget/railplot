@@ -17,10 +17,13 @@ pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown t
 pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
 type PortRef = (Id, Port); 
 
+pub type Level = isize;
+
 #[derive(Debug)]
 pub enum Stmt {
     Node(String, Shape, Position),
     Edge(PortRef, PortRef),
+    Symbol(String, Position, Level, f64, f64),
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -84,6 +87,15 @@ fn parse_stmt(i: &mut usize, t: &[Token]) -> Result<Stmt, ParseError> {
             let port2 = parse_port(i,t)?;
             Ok(Stmt::Edge((name1,port1),(name2,port2)))
         },
+        &|i,t| { // SYMBOL
+            symbol(i,t,"symbol")?;
+            let symbol_name =  identifier(i,t)?;
+            let pos = number(i,t)?;
+            let level = number(i,t)?.round() as isize;
+            let width = number(i,t)?;
+            let origin_x = number(i,t)?;
+            Ok(Stmt::Symbol(symbol_name,pos,level,width,origin_x))
+        },
     ])
 }
 
@@ -119,7 +131,7 @@ fn lexer(x: &mut Iterator<Item = char>) -> Result<Vec<Token>, LexerError> {
     let mut line = 0;
     while let Some(&ch) = input.peek() {
         match ch {
-            x if x.is_numeric() => {
+            x if x.is_numeric() || x == '-' => {
                 let num :String = consume_while(&mut input, |a| {
                     a.is_numeric() || a == '-' || a == 'e' || a == 'E' || a == '.'
                 }).into_iter().collect();

@@ -12,6 +12,10 @@ rolling = {path = "../rolling" }
 serde_json = "*"
 svg = "*"
 diffsolver = { path = "../diffsolver" }
+itertools="*"
+lp-modeler ="*"
+disjoint-sets = "*"
+ordered-float = "*"
 
 [lib]
 crate-type=["rlib","staticlib"]

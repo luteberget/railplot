@@ -4,15 +4,15 @@ use parser;
 use parser::{Side, Dir, Port};
 use trans_red::trans_red;
 
-type EdgeRef = usize;
-type NodeRef = usize;
+pub type EdgeRef = usize;
+pub type NodeRef = usize;
 
 //#[derive(Copy,Clone,Debug)]
 //pub enum Side { Left, Right}
 //#[derive(Copy,Clone,Debug)]
 //pub enum Dir { Up, Down }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum NodeShape {
     Begin,
     End,
@@ -41,11 +41,11 @@ impl<'c> Dirs<'c> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct Node { 
-    name :String,
-    pos: f64,
-    shape :NodeShape,
+    pub name :String,
+    pub pos: f64,
+    pub shape :NodeShape,
 }
 
 #[derive(Copy,Clone,Hash,Debug,PartialEq, Eq)]
@@ -53,6 +53,29 @@ pub struct PortRef {
     pub node: usize,
     pub port: Port,
 }
+
+
+pub type Pt = (f64,f64);
+
+#[derive(Debug,Clone)]
+pub struct Symbol {
+    /// symbol name
+    pub name: String,
+
+    /// absolute position of insertion point
+    pub abspos :f64,
+
+    /// width of symbol
+    pub width :f64,
+
+    /// origin (insertion point) distance from left edge of symbol
+    pub origin_x :f64,
+
+    /// level
+    pub level: isize,
+}
+
+
 
 pub fn port(node: usize, port: Port) -> PortRef { PortRef { node, port } }
 
@@ -67,10 +90,11 @@ pub struct Edge {
 pub enum EdgeSide { Begin, End }
 
 
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub struct SolverInput {
     pub nodes: Vec<Node>,
     pub edges: Vec<Edge>,
+    pub symbols: Vec<(usize,Symbol)>,
 }
 
 use std::collections::HashMap;
@@ -84,7 +108,16 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,u
                 nodes_in.push((name,sh,pos));
             },
             parser::Stmt::Edge(a,b) => {
-                edges_in.push((a,b));
+                edges_in.push((a,b,vec![]));
+            },
+            parser::Stmt::Symbol(name,pos,level,w,x) => {
+                ((edges_in.last_mut().unwrap()).2).push(Symbol {
+                    name: name,
+                    abspos: pos,
+                    level: level,
+                    width: w,
+                    origin_x: x,
+                });
             }
         }
     }
@@ -94,6 +127,7 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,u
 
     let mut edges = Vec::new();
     let mut nodes = Vec::new();
+    let mut symbols = Vec::new();
     let mut edge_to : HashMap<PortRef, usize> = HashMap::new();
     let mut node_names = HashMap::new();
 
@@ -106,16 +140,20 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,u
             }
         }
 
-        edges_in.sort_by_key(|((n1,_),_)| node_names[n1].clone());
+        edges_in.sort_by_key(|((n1,_),_,_)| node_names[n1].clone());
 
 
-        for ((n1,p1),(n2,p2)) in edges_in {
+        for ((n1,p1),(n2,p2),edge_symbols) in edges_in {
             edge_to.insert(port(node_names[&n1], p1), edges.len());
             edge_to.insert(port(node_names[&n2], p2), edges.len());
             edges.push(Edge {
                 a: port(node_names[&n1], p1),
                 b: port(node_names[&n2], p2),
             });
+
+            for s in edge_symbols {
+                symbols.push((edges.len()-1, s));
+            }
         }
     }
 
@@ -139,7 +177,7 @@ pub fn convert(stmts :Vec<parser::Stmt>) -> Result<(SolverInput,HashMap<String,u
         });
     }
 
-    Ok((SolverInput { nodes, edges }, node_names))
+    Ok((SolverInput { nodes, edges, symbols }, node_names))
 }
 
 //  node->edge lookup
@@ -277,10 +315,16 @@ fn less_than(nodes :&[Node], edges :&[Edge]) -> Vec<EdgePair> {
 }
 
 #[derive(Debug,Clone)]
-pub struct SolverOutput {
+pub struct TrackOutput {
     pub node_coords: Vec<(String, f64, f64)>,
     // TODO do we need to have names for edges for later consumption?
     pub edge_levels: Vec<(PortRef, PortRef, f64)>,
+}
+
+#[derive(Debug,Clone)]
+pub struct SolverOutput {
+    pub tracks :TrackOutput,
+    pub symbols :Vec<((usize,Symbol), (Pt,Pt))>,
 }
 
 // TODO: is this too messy? could it be done better directly in the logic?
@@ -353,7 +397,33 @@ pub fn solve_difftheory(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Ed
         set.into_iter().collect()
     };
 
-    solve_diff(input, edges_lt).map(|o| (o,portref_changes))
+    let tracks  = solve_diff(input.clone(), edges_lt)?;
+    use symbols::place_symbols;
+
+
+
+    let mut s_edges = Vec::new();
+    for ((pr1,pr2,y),e) in tracks.edge_levels.iter().zip(input.edges.iter()) {
+        let (_n,x1,y1) = &tracks.node_coords[pr1.node];
+        let (_n,x2,y2) = &tracks.node_coords[pr2.node];
+        s_edges.push((e.clone(), conv_line((*x1,*y1),*y,(*x2,*y2))));
+	}
+
+    let s_nodes = tracks.node_coords.clone().into_iter()
+        .zip(input.nodes.clone().into_iter())
+        .map(|((_,x,y),n)| (n,(x,y))).collect::<Vec<_>>();
+
+
+    let symbols = place_symbols(&s_nodes, &s_edges, &input.symbols)
+        .map_err(|_| "Place_symbols error".to_string())?;
+
+    //let symbols = symbols.into_iter().zip(input.symbols.iter().cloned())
+    //    .map(|((x,s),(p,t))| (s,x)).collect();
+    //
+    
+    println!("SYMBOLS {:#?}", symbols);
+
+    Ok((SolverOutput { tracks: tracks, symbols: symbols}, portref_changes))
 }
 
 use diffsolver::minisat::Bool;
@@ -398,7 +468,7 @@ fn mk_port_shape(side :EdgeSide, shape :&NodeShape, port :Port, s :Bool) -> Port
     }
 }
 
-pub fn solve_diff(input :SolverInput, edges_lt :Vec<EdgePair>) -> Result<SolverOutput, String> {
+pub fn solve_diff(input :SolverInput, edges_lt :Vec<EdgePair>) -> Result<TrackOutput, String> {
     println!("($) solve_diff");
     use diffsolver::*;
     use diffsolver::minisat::*;
@@ -411,6 +481,7 @@ pub fn solve_diff(input :SolverInput, edges_lt :Vec<EdgePair>) -> Result<SolverO
 
     println!("NODES {:?}", nodes);
     println!("EDGES {:?}", edges);
+    println!("SYMBOLS {:?}", &input.symbols);
 
     println!("($) creating representation");
     // representation
@@ -910,7 +981,7 @@ pub fn solve_diff(input :SolverInput, edges_lt :Vec<EdgePair>) -> Result<SolverO
         
 
         //solve_linear(&input, edges_lt, slanted_out)
-        let mut output = SolverOutput {
+        let mut output = TrackOutput {
             node_coords: Vec::new(),
             edge_levels: Vec::new(),
         };
@@ -960,7 +1031,7 @@ pub fn solve_diff(input :SolverInput, edges_lt :Vec<EdgePair>) -> Result<SolverO
 //}
 
 
-pub fn solve(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Edge,Edge)>) ,String> {
+pub fn solve(mut input :SolverInput) -> Result<(TrackOutput, Vec<(Edge,Edge)>) ,String> {
     let conf = z3::Config::new();
     let ctx = z3::Context::new(&conf);
     let opt = z3::Optimize::new(&ctx);
@@ -1268,7 +1339,7 @@ pub fn solve(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Edge,Edge)>) 
     if !status { return Err("Solver failed".to_string()); }
     let model = opt.get_model();
 
-    let mut output = SolverOutput {
+    let mut output = TrackOutput {
         node_coords: Vec::new(),
         edge_levels: Vec::new(),
     };
@@ -1294,3 +1365,30 @@ pub fn solve(mut input :SolverInput) -> Result<(SolverOutput, Vec<(Edge,Edge)>) 
 
     Ok((output,portref_changes))
 }
+
+
+
+
+
+pub fn conv_line((x1,y1) :(f64,f64), l :f64, (x2,y2) :(f64,f64)) -> Vec<(f64,f64)> {
+    let dx1 = (y1-l).abs();
+    let dx2 = (y2-l).abs();
+    
+    let mut line = Vec::new();
+    
+    let p1 = (x1,y1);
+    let p2 = (x1+dx1, l);
+    let p3 = (x2-dx2, l);
+    let p4 = (x2,y2);
+    
+    line.push(p1);
+    if (p2.0-p1.0)*(p2.0-p1.0) + 
+       (p2.1-p1.1)*(p2.1-p1.1) > 1e-5 { line.push(p2); }
+    if (p3.0-p2.0)*(p3.0-p2.0) + 
+       (p3.1-p2.1)*(p3.1-p2.1) > 1e-5 { line.push(p3); }
+    if (p4.0-p3.0)*(p4.0-p3.0) + 
+       (p4.1-p3.1)*(p4.1-p3.1) > 1e-5 { line.push(p4); }
+
+    line
+}
+

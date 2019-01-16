@@ -4,9 +4,9 @@ use solver::SolverOutput;
 use parser::Port;
 
 pub fn convert(model :&SolverOutput) -> Result<String, String> {
-    let width = model.node_coords.iter().map(|(_,x,_)| *x).fold(-1./0., f64::max);
-    let height = model.node_coords.iter().map(|(_,_,y)| *y)
-        .chain(  model.edge_levels.iter().map(|(_,_,y)| *y))
+    let width = model.tracks.node_coords.iter().map(|(_,x,_)| *x).fold(-1./0., f64::max);
+    let height = model.tracks.node_coords.iter().map(|(_,_,y)| *y)
+        .chain(  model.tracks.edge_levels.iter().map(|(_,_,y)| *y))
         .fold(-1./0.,f64::max);
 
     use svg::Document;
@@ -26,9 +26,9 @@ pub fn convert(model :&SolverOutput) -> Result<String, String> {
         .set("width",doc_width)
         .set("height",doc_height);
 
-    for (pr1,pr2,y) in &model.edge_levels {
-        let (_n,x1,y1) = &model.node_coords[pr1.node];
-        let (_n,x2,y2) = &model.node_coords[pr2.node];
+    for (pr1,pr2,y) in &model.tracks.edge_levels {
+        let (_n,x1,y1) = &model.tracks.node_coords[pr1.node];
+        let (_n,x2,y2) = &model.tracks.node_coords[pr2.node];
 
         let (y1,mut top_a) = if let Port::Top = pr1.port { (y1 + 1.0, true) } else { (*y1, false) };
         let (y2,mut top_b) = if let Port::Top = pr2.port { (y2 + 1.0, true) } else { (*y2, false) };
@@ -78,7 +78,7 @@ pub fn convert(model :&SolverOutput) -> Result<String, String> {
 
 
     // Add nodes
-    for (name,x,y) in &model.node_coords {
+    for (name,x,y) in &model.tracks.node_coords {
         let c = svg::node::element::Circle::new()
             .set("cx",tr_x(*x))
             .set("cy",tr_y(*y))
