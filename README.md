@@ -16,6 +16,6 @@
 
 ### Examples:
 
-![alt text][.imgs/comparisonfig.png]
+![Comparison of algorithms](.imgs/comparisonfig.png)
 
 
