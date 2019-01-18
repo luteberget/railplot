@@ -1,0 +1,35 @@
+node gardermobanen begin 498
+node n8b outrightsw 1488
+node n19b outrightsw 2666
+node n24a inleftsw 3392
+node dovrebanen end 3712
+node n34b outrightsw 1686
+node n43a inleftsw 2813
+node n47b outleftsw 2914
+node n51a inleftsw 3175
+node n56a begin 2607
+node n58a inrightsw 2996
+node n61a inleftsw 3080
+node n64b end 3170
+node n74a inleftsw 2195
+node hovedbanen begin 0
+node n91b outleftsw 719
+edge gardermobanen.out n8b.trunk
+edge n8b.left n19b.trunk
+edge n8b.right n34b.trunk
+edge n19b.left n24a.right
+edge n19b.right n58a.right
+edge n24a.trunk dovrebanen.in
+edge n34b.left n43a.right
+edge n34b.right n74a.right
+edge n43a.trunk n47b.trunk
+edge n47b.left n61a.left
+edge n47b.right n51a.right
+edge n51a.trunk n24a.left
+edge n56a.out n58a.left
+edge n58a.trunk n61a.right
+edge n61a.trunk n64b.in
+edge n74a.trunk n43a.left
+edge hovedbanen.out n91b.trunk
+edge n91b.left n74a.left
+edge n91b.right n51a.left

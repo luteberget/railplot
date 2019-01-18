@@ -1,0 +1,10 @@
+// Split topology 
+
+node a begin 0.0
+node b outleftsw 100.0
+node c end 200.0
+node d end 200.0
+
+edge a.out b.trunk
+edge b.left c.in
+edge b.right d.in

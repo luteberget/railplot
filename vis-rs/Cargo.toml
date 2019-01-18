@@ -1,0 +1,22 @@
+[package]
+name = "vis_rs"
+version = "0.1.0"
+authors = ["Bjørnar Luteberget <luteberget@gmail.com>"]
+
+[dependencies]
+clap = "*"
+failure = "*"
+failure_derive = "*"
+z3 = "*"
+rolling = {path = "../rolling" }
+serde_json = "*"
+svg = "*"
+diffsolver = { path = "../diffsolver" }
+itertools="*"
+lp-modeler ="*"
+disjoint-sets = "*"
+ordered-float = "*"
+
+[lib]
+crate-type=["rlib","staticlib"]
+
