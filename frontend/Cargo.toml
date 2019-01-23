@@ -14,3 +14,4 @@ serde_json ="*"
 minidom = "*"
 quick-xml="*"
 ordered-float="*"
+diffsolver = {path = "../diffsolver"}

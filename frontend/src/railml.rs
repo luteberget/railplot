@@ -73,7 +73,7 @@ pub fn branching_to_schematic_graph<Obj>(model :BranchingModel<Obj>) -> Result<S
                 model.nodes.push(Node {
                     name: name.clone(),
                     pos: t.end.0,
-                    shape: Shape::Begin,
+                    shape: Shape::End,
                 });
                 ref_edges.push(((last_port, Ok((name.clone(), Port::In))), edge_objects));
             },
