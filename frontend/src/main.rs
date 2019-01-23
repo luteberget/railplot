@@ -28,9 +28,12 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 mod schematic_graph;
-mod solver;
+mod solvers;
 mod xml;
 mod railml;
+
+mod levelssat;
+mod edgeorder;
 
 //#[derive(Debug, Copy, Clone)]
 //enum InputFormat { RailML, Custom, Script }
@@ -94,7 +97,7 @@ fn main() -> Result<(),ExitFailure> {
     //use std::env;
     //use std::path::Path;
     use std::fs;
-    use std::ffi::OsStr;
+    //use std::ffi::OsStr;
 
     let script_file_contents = fs::read_to_string(&opt.script).expect("Could not read file.");
     //let input_format = (opt.input_format).map(|x| Ok(x)).unwrap_or_else(|| {
@@ -136,15 +139,17 @@ fn main() -> Result<(),ExitFailure> {
 
             // choose solver
             let method = args.get::<_,String>("method").unwrap_or("levelssat".to_string());
+            use self::solvers::SchematicSolver;
+            use self::solvers::Goal;
             let solver = match method.as_str() {
-                "levelssat" => solver::levelssat::Solver {}, 
+                "levelssat" => Box::new(solvers::LevelsSatSolver { criteria:
+                    vec![Goal::Bends, Goal::Height, Goal::Width],
+                }), 
                 _ => panic!(),
             };
 
-            let output = solver.solve(m);
-
-            let lua_output=  output_to_lua(output);
-
+            let output = solver.solve(m).to_lua_err()?;
+            let lua_output = solvers::output_to_lua(output)?;
             Ok(lua_output)
         })?;
         l.globals().set("plot_network",plot_network)?;

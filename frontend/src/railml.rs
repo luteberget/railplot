@@ -1,4 +1,3 @@
-use serde_json::{json};
 use std::collections::{HashMap, HashSet};
 use super::schematic_graph::*;
 use ordered_float::OrderedFloat;
@@ -89,10 +88,10 @@ pub fn branching_to_schematic_graph<Obj>(model :BranchingModel<Obj>) -> Result<S
         println!("e {:?}", (a,b,c.len()));
     }
 
-    model.edges = ref_edges.into_iter().map(|((a,b),objs)| {
+    model.edges = ref_edges.into_iter().map(|((a,b),objects)| {
         let begin = a.unwrap_or_else(|(x,y)| named_connections.remove(&(y,x)).unwrap());
         let end =   b.unwrap_or_else(|(x,y)| named_connections.remove(&(y,x)).unwrap());
-        Edge { a: begin, b: end, objs: objs }
+        Edge { a: begin, b: end, objects }
     }).collect();
 
     Ok(model)

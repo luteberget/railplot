@@ -19,21 +19,23 @@ pub enum Side { Left, Right }
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown top/bottom */ }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
 
 pub type Level = isize;
 
+#[derive(Debug )]
 pub struct Node {
     pub name :String,
     pub pos :f64,
     pub shape :Shape,
 }
 
+#[derive(Debug )]
 pub struct Edge<Obj> {
     pub a :(String,Port),
     pub b :(String,Port),
-    pub objs :Vec<(Symbol,Obj)>,
+    pub objects :Vec<(Symbol,Obj)>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -111,7 +113,7 @@ pub fn schematic_graph_to_lua<'l>(ctx :rlua::Context<'l>, schematic :SchematicGr
         edge_lua.set("node_b", e.b.0)?;
         edge_lua.set("port_a", port_to_string(e.a.1))?;
         edge_lua.set("port_b", port_to_string(e.b.1))?;
-        let os = e.objs.into_iter().map(|(s,o)| {
+        let os = e.objects.into_iter().map(|(s,o)| {
             match o.clone() {
                 rlua::Value::Table(t) => {
                     t.set::<_,rlua::Value>("_symbol_info", symbol_to_lua(&ctx, &s)?)?;
@@ -153,13 +155,13 @@ pub fn schematic_graph_from_lua<'l>(schematic :&rlua::Table<'l>) -> Result<Schem
         let port_a = port_from_string(edge.get::<_,String>("port_a")?);
         let port_b = port_from_string(edge.get::<_,String>("port_b")?);
         let symbols_tbl = edge.get::<_,rlua::Table>("objects")?;
-        let objs = symbols_tbl.sequence_values::<rlua::Table>().map(|s| {
+        let objects = symbols_tbl.sequence_values::<rlua::Table>().map(|s| {
             let o = s?;
             use rlua::ExternalResult;
             let symbol_info = symbol_from_lua(&o.get::<_,rlua::Table>("_symbol_info")?).to_lua_err()?;
             Ok((symbol_info, rlua::Value::Table(o)))
         }).collect::<Result<Vec<_>,_>>()?;
-        model.edges.push(Edge { a: (node_a, port_a), b: (node_b, port_b), objs: objs });
+        model.edges.push(Edge { a: (node_a, port_a), b: (node_b, port_b), objects });
     }
 
     println!("converted model");
