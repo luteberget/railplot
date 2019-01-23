@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<railml xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.railml.org/schemas/2013">
+  <infrastructure>
+    <tracks>
+        <track name="SP1">
+            <trackTopology>
+                <trackBegin pos="0.0" absPos="0.0">
+                    <openEnd id="b1" />
+                </trackBegin>
+                <trackEnd pos="1000.0" absPos="1000.0">
+                    <openEnd id="b2" />
+                </trackEnd>
+                <connections>
+                    <switch pos="500.0" absPos="500.0" dir="up" id="sw1">
+                        <connection id="sw1c" ref="t2b" course="left" orientation="outgoing" />
+                    </switch>
+                </connections>
+            </trackTopology>
+            <ocsElements>
+                <signals>
+                    <signal id="sig1" name="Signal 1" pos="50.0" type="main"  dir="up"/>
+                    <signal id="sig2" name="Signal 2" pos="250.0" type="main" dir="up"/>
+                    <signal id="sig3" name="Signal 3" pos="350.0" type="main" dir="up"/>
+                    <signal id="sig3" name="Signal 3" pos="850.0" type="main" dir="up"/>
+                </signals>
+                <trainDetectionElements>
+                    <trainDetector id="d0" name="detector 1" pos="10.0" />
+                    <trainDetector id="d1" name="detector 1" pos="50.0" />
+                    <trainDetector id="d2" name="detector 2" pos="250.0" />
+                    <trainDetector id="d3" name="detector 2" pos="350.0" />
+                    <trainDetector id="d4" name="detector 2" pos="390.0" />
+                </trainDetectionElements>
+            </ocsElements>
+        </track>
+        <track name="SP2">
+            <trackTopology>
+                <trackBegin pos="0.0" absPos="500.0">
+                    <connection id="t2b" ref="sw1c" />
+                </trackBegin>
+                <trackEnd pos="500.0" absPos="1000.0">
+                    <openEnd id="t2e" />
+                </trackEnd>
+            </trackTopology>
+        </track>
+    </tracks>
+  </infrastructure>
+</railml>

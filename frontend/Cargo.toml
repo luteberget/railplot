@@ -6,3 +6,11 @@ edition = "2018"
 
 [dependencies]
 structopt = "*"
+rlua = "*"
+failure ="*"
+exitfailure ="*"
+serde_json ="*"
+
+minidom = "*"
+quick-xml="*"
+ordered-float="*"
