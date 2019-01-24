@@ -274,8 +274,10 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     Ok(Output {
         node_coords: node_x_values.into_iter().zip(node_y_values.into_iter())
             .map(|(x,y)| ((x as f64)/(symbol_factor as f64), y as f64)).collect(),
-        edge_levels: edge_y_values.into_iter().map(|l| l as f64).collect(),
-        symbol_xs: symbol_x_values.into_iter().map(|x| x as f64).collect(),
+        edge_levels: edge_y_values.into_iter()
+            .map(|l| l as f64).collect(),
+        symbol_xs: symbol_x_values.into_iter()
+            .map(|x| (x as f64)/(symbol_factor as f64)).collect(),
     })
 }
 

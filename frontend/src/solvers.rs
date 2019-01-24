@@ -9,14 +9,16 @@ pub enum Goal {
     Width,Height,Bends,Diagonals,Nodeshapes,Shortedges,
 }
 
+type Pt = (f64,f64);
+
 pub trait SchematicSolver {
-    fn solve<Obj>(self, model :SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String>;
+    fn solve<Obj:Clone>(self, model :SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String>;
 }
 
 pub struct SchematicOutput<Obj> {
-    pub nodes :Vec<(Node, (f64,f64))>, // node coords
-    pub lines :Vec<(Edge<Obj>,Vec<(f64,f64)>)>, // edge lines
-    pub symbols :Vec<(Obj,(f64,f64),f64)>, // origin pt and rotation
+    pub nodes :Vec<(Node, Pt)>, // node coords
+    pub lines :Vec<(Edge<Obj>,Vec<Pt>)>, // edge lines
+    pub symbols :Vec<(Obj,(Pt,Pt))>, // origin pt and rotation
 }
 
 
@@ -25,16 +27,19 @@ pub struct LevelsSatSolver{
 }
 
 impl SchematicSolver for LevelsSatSolver {
-    fn solve<Obj>(self, mut model:SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String> {
+    fn solve<Obj:Clone>(self, mut model:SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String> {
         // Convert 
         model.nodes.sort_by_key(|n| OrderedFloat(n.pos));
         let node_names = model.nodes.iter().enumerate()
             .map(|(i,n)| (n.name.clone(), i)).collect::<HashMap<_,_>>();
         model.edges.sort_by_key(|e| (node_names[&e.a.0], node_names[&e.b.0]));
 
-        let symbols = model.edges.iter().enumerate().flat_map(|(i,e)| {
-            e.objects.iter().map(move |(s,_objref)| (i,s))
+        let symbols_ref = model.edges.iter().enumerate().flat_map(|(i,e)| {
+            e.objects.iter().map(move |(s,objref)| (i,s,objref))
         }).collect::<Vec<_>>();
+
+        let symbols = symbols_ref.iter().map(|(i,s,_)| (*i,*s))
+            .collect::<Vec<_>>();
 
         let edges = model.edges.iter().map(|e| {
             levelssat::Edge {
@@ -60,26 +65,108 @@ impl SchematicSolver for LevelsSatSolver {
         println!("c {:?}", node_coords);
         println!("l {:?}", edge_levels);
         println!("s {:?}", symbol_xs);
-        let edge_lines = convert_edge_levels(&edges, &node_coords, &edge_levels)?;
-        let symbol_coords = unimplemented!();
+
+        let edge_lines = convert_edge_levels(
+            &edges2.iter().map(|((a,_),(b,_))| (*a,*b)).collect::<Vec<_>>(),
+            &node_coords, &edge_levels);
+
+        let symbol_coords = convert_symbol_coords(&symbols, &symbol_xs, &edge_lines);
+        let symbol_out = model.edges.iter()
+            .flat_map(|e| e.objects.iter()).map(|(_,objref)| objref.clone())
+            .zip(symbol_coords.into_iter()).collect();
+
+        // the given output should be 
+        // (1) line segments for edges
+        // (2) coords for nodes?
+        // (3) coords for symbols (with y coord) and rotation
+        // (4) switches with tangents? TODO
+        // (5) something about end-nodes? TODO
         Ok(SchematicOutput {
             nodes: model.nodes.into_iter().zip(node_coords.into_iter()).collect(),
-            lines: edge_lines,
-            symbols: symbol_coords,
+            lines: model.edges.into_iter().zip(edge_lines.into_iter()).collect(),
+            symbols: symbol_out,
         })
-            // the given output should be 
-            // (1) line segments for edges
-            // (2) coords for nodes?
-            // (3) coords for symbols (with y coord) and rotation
-            // (4) switches with tangents? TODO
-            // (5) something about end-nodes? TODO
+
     }
 }
 
-fn convert_edge_levels(edges :&[Edge], node_coords :&[(f64,f64)], edge_levels :&[f64]) -> Result<Vec<Vec<(f64,f64)>>, String> {
+fn convert_symbol_coords(symbols :&[(usize,&Symbol)], symbol_xs :&[f64], edge_lines :&[Vec<(f64,f64)>]) -> Vec<(Pt,Pt)> {
+    fn lerp2((x0,y0) :Pt, (x1,y1) :Pt, s :f64) -> Pt {
+        (x0 + s * (x1 - x0),
+         y0 + s * (y1 - y0))
+    }
+
+    fn line_pt_at_x(l :&[Pt], x: f64) -> Result<Pt,()> {
+        //println!("{:?}", (l,x));
+        l.binary_search_by_key(&OrderedFloat(x), |(x0,_y0)| OrderedFloat(*x0))
+         .map(|i| l[i]).or_else(|i| {
+             if i == 0 || i == l.len() { Err(()) }
+             else { Ok(lerp2(l[i-1],l[i], (x - l[i-1].0) / (l[i].0 - l[i-1].0))) }
+         })
+    }
+
+    fn rot90((x,y) :Pt) -> Pt { (-y,x) }
+    fn addpt((x0,y0):Pt,(x1,y1):Pt) -> Pt { (x0+x1,y0+y1) }
+    fn scale(s:f64, (x,y):Pt) -> Pt { (s*x,s*y) }
+
+    fn line_tangent_at_x(l :&[Pt], x :f64) -> Result<Pt,()> {
+        l.binary_search_by_key(&OrderedFloat(x), |(x0,_y0)| OrderedFloat(*x0))
+            .map(|i| l[i]).or_else(|i| {
+                if i == 0 || i == l.len() { Err(()) }
+                else {
+                    let (dx,dy) = (l[i].0-l[i-1].0, l[i].1-l[i-1].1);
+                    let len = (dx*dx+dy*dy).sqrt();
+                    Ok((dx/len,dy/len))
+                }})
+    }
+
+    let mut output = Vec::new();
+    for (i,(ei,s)) in symbols.iter().enumerate() {
+        let line_pt = line_pt_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap();
+        let line_tangent  = line_tangent_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap();
+        let pt = addpt(line_pt, scale(0.25*(s.level as f64),rot90(line_tangent)));
+
+        output.push((pt,line_tangent));
+    }
+
+    output
+
+}
+
+fn convert_edge_levels(edges :&[(usize,usize)], node_coords :&[(f64,f64)], edge_levels :&[f64]) -> Vec<Vec<(f64,f64)>> {
+    edges.iter().enumerate().map(|(i,(a, b))| {
+        let (x1,y1) = node_coords[*a];
+        let (x2,y2) = node_coords[*b];
+        let l = edge_levels[i];
+        conv_line((x1,y1),l,(x2,y2))
+    }).collect()
+}
+
+pub fn conv_line((x1,y1) :(f64,f64), l :f64, (x2,y2) :(f64,f64)) -> Vec<(f64,f64)> {
+    let dx1 = (y1-l).abs();
+    let dx2 = (y2-l).abs();
+
+    let mut line = Vec::new();
+
+    let p1 = (x1,y1);
+    let p2 = (x1+dx1, l);
+    let p3 = (x2-dx2, l);
+    let p4 = (x2,y2);
+
+    line.push(p1);
+    if (p2.0-p1.0)*(p2.0-p1.0) +
+       (p2.1-p1.1)*(p2.1-p1.1) > 1e-5 { line.push(p2); }
+    if (p3.0-p2.0)*(p3.0-p2.0) +
+       (p3.1-p2.1)*(p3.1-p2.1) > 1e-5 { line.push(p3); }
+    if (p4.0-p3.0)*(p4.0-p3.0) +
+       (p4.1-p3.1)*(p4.1-p3.1) > 1e-5 { line.push(p4); }
+
+    line
 }
 
 
-pub fn output_to_lua(_model :SchematicOutput<rlua::Value>) -> Result<rlua::Value,rlua::Error> {
+
+pub fn output_to_lua(model :SchematicOutput<rlua::Value>) -> Result<rlua::Value,rlua::Error> {
+    println!("{}", model.symbols.len());
     unimplemented!()
 }
