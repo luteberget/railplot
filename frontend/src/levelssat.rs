@@ -1,5 +1,8 @@
 use crate::schematic_graph::*;
 use diffsolver::*;
+use diffsolver::minisat::*;
+use diffsolver::minisat::unary::*;
+use ordered_float::OrderedFloat;
 
 #[derive(Debug)]
 pub struct Edge {
@@ -23,11 +26,13 @@ pub struct Output {
     pub symbol_xs: Vec<f64>,
 }
 
-pub fn solve(nodes :&[Shape], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair]) -> Result<Output, String> {
+pub struct Node {
+    pub shape :Shape,
+    pub pos :f64,
+}
 
-    use diffsolver::*;
-    use diffsolver::minisat::*;
-    use diffsolver::minisat::unary::*;
+pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair]) -> Result<Output, String> {
+
 
     let mut s = SATModDiff::new();
 
@@ -40,7 +45,7 @@ pub fn solve(nodes :&[Shape], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edge
     let edge_short = edges.iter()
         .map(|_| (s.sat.new_lit(), s.sat.new_lit())).collect::<Vec<_>>();
     let slanted = nodes.iter()
-        .map(|x| if let Shape::Switch(_,_) = x { s.sat.new_lit() }
+        .map(|x| if let Shape::Switch(_,_) = x.shape { s.sat.new_lit() }
              else { Bool::Const(false) } )
         .collect::<Vec<_>>();
 
@@ -67,9 +72,9 @@ pub fn solve(nodes :&[Shape], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edge
     for (i,e) in edges.iter().enumerate() {
         println!("edge {:?}", e);
         let (short_up, short_down) = edge_short[i];
-        let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[e.a.node],
+        let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[e.a.node].shape,
                                     e.a.port, slanted[e.a.node]);
-        let e_end  = mk_port_shape(EdgeSide::End, &nodes[e.b.node],
+        let e_end  = mk_port_shape(EdgeSide::End, &nodes[e.b.node].shape,
                                    e.b.port, slanted[e.b.node]);
 
         // Short up/down requires both edge side in same slant
@@ -124,38 +129,83 @@ pub fn solve(nodes :&[Shape], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edge
         edge_shapes.push((e_begin,e_end));
     }
 
-        let print = |m:&SATDiffModel| {
-        let mut xs = node_delta_xs.iter().scan(0, |a,x| { *a += m.sat.value(x); Some(*a) }).collect::<Vec<_>>();
-        xs.insert(0,0);
+    // Create a set of X values in the difference logic, 
+    // scaled by a factor to allow fractional numbers,
+    // independent of Y values, related only through
+    // the dx unary numbers.
 
-        let ys = node_ys.iter().map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
+    let symbol_node_xs = nodes.iter().enumerate()
+        .map(|(i,_)| s.diff.named_var(Some(format!("snx_{}",i)))).collect::<Vec<_>>();
+    let symbol_xs = symbols.iter().enumerate()
+        .map(|(i,_)| s.diff.named_var(Some(format!("s_x_{}",i)))).collect::<Vec<_>>();
 
-        for (i,x) in xs.iter().enumerate() {
-            println!("Node({}): x={}, y={}", i, x, ys[i]);
-        }
-
-        let edge_ys = edge_ys.iter().map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
-        for (i,y) in edges.iter().enumerate() {
-            println!("Edge({}): y={}", i, edge_ys[i]);
-        }
-
-        let z = m.diff.zero();
-        println!("Zero={}", m.diff.get_value(z));
-    };
-
-
-
-            println!("($) starting solve ({} dvars, {} dclauses)", s.diff.num_vars(), s.diff.num_constraints());
-                {
-
-    let model = s.solve().map_err(|_| "Unconstrained solve failed".to_string())?;
-    print(&model);
+    let symbol_factor = 10000isize;
+    //
+    // symbol node x deltas
+    for (i,dx) in node_delta_xs.iter().enumerate() {
+        let dx0a = s.cond_constraint(symbol_node_xs[i], symbol_node_xs[i+1], 0);
+        let dx0b = s.cond_constraint(symbol_node_xs[i+1], symbol_node_xs[i], 0);
+        let dx1a = s.cond_constraint(symbol_node_xs[i], symbol_node_xs[i+1], -1*symbol_factor);
+        let dx1b = s.cond_constraint(symbol_node_xs[i+1], symbol_node_xs[i], 1*symbol_factor);
+        s.sat.add_clause(vec![!dx.lt_const(0),dx0a]);
+        s.sat.add_clause(vec![!dx.lt_const(0),dx0b]);
+        s.sat.add_clause(vec![dx.lt_const(0), !dx.lt_const(1), dx1a]);
+        s.sat.add_clause(vec![dx.lt_const(0), !dx.lt_const(1), dx1b]);
     }
 
+    // (c1) global order
+    {
+        let mut v = Vec::new();
+        for ((_ei,s),var) in symbols.iter().zip(symbol_xs.iter()) {
+            v.push((s.pos, *var));
+        }
+        for (n,x) in nodes.iter().zip(symbol_node_xs.iter()) {
+            v.push((n.pos, *x));
+        }
+
+        v.sort_by_key(|(p,_)| OrderedFloat(*p));
+        for ((_,a),(_,b)) in v.iter().zip(v.iter().skip(1)) {
+            let c = s.cond_constraint(*a,*b,0);
+            s.sat.add_clause(vec![c]);
+        }
+    }
+
+    // (c2) edge-class order and bounds
+    for (a,b) in symbol_edgeclass_constraints(&nodes, &edges, &symbols, &symbol_node_xs, &symbol_xs, symbol_factor) {
+        println!("Constraint {:?}", (a,b));
+        // TODO Add constriants correctly
+    }
+         let print = |m:&SATDiffModel| {
+         let mut xs = node_delta_xs.iter().scan(0, |a,x| { *a += m.sat.value(x); Some(*a) }).collect::<Vec<_>>();
+         xs.insert(0,0);
+ 
+         let ys = node_ys.iter().map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
+ 
+         for (i,x) in xs.iter().enumerate() {
+             println!("Node({}): x={}, y={}", i, x, ys[i]);
+         }
+ 
+         let edge_ys = edge_ys.iter().map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
+         for (i,y) in edges.iter().enumerate() {
+             println!("Edge({}): y={}", i, edge_ys[i]);
+         }
+ 
+         let z = m.diff.zero();
+         println!("Zero={}", m.diff.get_value(z));
+     };
 
 
+
+    println!("($) starting solve ({} dvars, {} dclauses)", s.diff.num_vars(), s.diff.num_constraints());
+
+    {
+        let model = s.solve().map_err(|_| "Unconstrained solve failed".to_string())?;
+    }
+
+    goal_kinks(&mut s, &edge_shapes)?;
 
     println!("started diffsolver");
+    print(&s.solve().unwrap());
     unimplemented!()
 }
 
@@ -206,4 +256,175 @@ fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool) -> PortShap
     }
 }
 
+fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff, x :Unary) -> Result<(), String> {
+    let (mut lo, mut hi) = (0,x.bound());
+    while lo < hi {
+        let mid = (hi-lo)/2 + lo;
+        println!("Constraint on {}", mid);
+        match s.solve_under_assumptions(&vec![x.lte_const(mid as isize)]) {
+            Ok(_) => { println!("(^) successful kinks <= {}", mid); hi = mid; }
+            Err(_) => { println!("(^) unsuccessful kinks <= {}", mid); lo = mid+1; }
+        }
+    }
+    assert_eq!(lo,hi);
+    s.sat.add_clause(vec![x.lte_const(lo as isize)]);
+    s.solve().map_err(|_| format!("Could not compress {}",name))?;
+    Ok(())
+}
+
+#[derive(PartialEq,Eq)]
+enum EdgeDir { Up, Straight, Down }
+
+fn map_portshape(s :&minisat::Model, x :&PortShape) -> EdgeDir {
+    if s.value(&x.up) { return EdgeDir::Up; }
+    if s.value(&x.straight) { return EdgeDir::Straight; }
+    if s.value(&x.down) { return EdgeDir::Down; }
+    panic!()
+}
+
+
+fn goal_kinks(s :&mut SATModDiff, edge_shapes :&[(PortShape,PortShape)]) -> Result<(),String> {
+    let max_kinks = {
+        let m = s.solve().map_err(|_| format!("Could not solve."))?;
+        let edgedir = edge_shapes.iter().map(|(begin,end)|
+             (map_portshape(&m.sat, begin),
+              map_portshape(&m.sat, end))).collect::<Vec<_>>();
+        let max_kinks :usize = edgedir.iter().map(|(a,b)| {
+            if *a == *b { return 0; }
+            if (*a == EdgeDir::Straight || *b == EdgeDir::Straight) { return 1; }
+            return 2;
+        }).sum();
+        max_kinks
+    };
+    println!("(^) Max kinks {}", max_kinks);
+
+    let kinks_unary = edge_shapes.iter().map(|(begin,end)| {
+        let x = Unary::new(&mut s.sat, 2);
+        s.sat.add_clause(vec![!begin.straight, end.straight, x.gte_const(1)]);
+        s.sat.add_clause(vec![begin.straight, !end.straight, x.gte_const(1)]);
+        s.sat.add_clause(vec![!begin.up,   !end.down, x.gte_const(2)]);
+        s.sat.add_clause(vec![!begin.down, !end.up,   x.gte_const(2)]);
+        x
+
+    }).collect::<Vec<_>>();
+    let sum_kinks = Unary::sum_truncate(&mut s.sat, kinks_unary, max_kinks+1);
+    optimize_and_commit_unary("kinks", s, sum_kinks)
+}
+
+
+#[derive(Debug, Copy, Clone)]
+struct DiffOffset(Option<DVar>, isize);
+
+fn symbol_edgeclass_constraints(nodes :&[Node], edges :&[Edge], symbols :&[(EdgeRef,&Symbol)], symbol_node_xs :&[DVar], symbol_xs :&[DVar], symbol_factor :isize) -> Vec<(DiffOffset,DiffOffset)> {
+    use std::collections::HashMap;
+    let edge_ports = edges.iter().enumerate().flat_map(|(i, Edge { a,b })| vec![(i,a),(i,b)])
+        .map(|(i,NodePort { node, port })| ((*node,*port),i)).collect::<HashMap<_,_>>();
+    let mut sameedgesabove = Vec::new();
+    let mut sameedgesbelow = Vec::new();
+    let mut edgelevelsymbols = HashMap::new();
+
+    let mut end = |ei:usize, dirfactor:isize, offset:f64, above:isize| {
+        let offset :isize = (offset*symbol_factor as f64) as isize;
+        let node_x = if dirfactor > 0 { symbol_node_xs[edges[ei].a.node] } 
+                else { symbol_node_xs[edges[ei].b.node] };
+        for l in (1..=2) {
+            let x = DiffOffset(Some(node_x), dirfactor*l*offset);
+            edgelevelsymbols.entry((ei,above*l)).or_insert(Vec::new())
+                .push((-(dirfactor as f64)*1e6, (x,x)));
+        }
+    };
+
+    for (i,Node { shape, pos }) in nodes.iter().enumerate() {
+        match shape {
+            Shape::Switch(side,dir) => {
+                let  leftedge = edge_ports[&(i,Port::Left)];
+                let rightedge = edge_ports[&(i,Port::Right)];
+                let trunkedge = edge_ports[&(i,Port::Trunk)];
+
+                println!("sw {} l{} r{} t{}", i,leftedge,rightedge,trunkedge);
+
+                match dir {
+                    Dir::Up => {
+                        end(rightedge, 1, 0.25,  1);
+                        end(leftedge,  1, 0.25, -1);
+                    },
+                    Dir::Down => {
+                        end(leftedge , -1, 0.25,  1);
+                        end(rightedge, -1, 0.25, -1);
+                    },
+                }
+
+                match (side,dir) {
+                    (Side::Left, Dir::Up)    =>  {
+                        sameedgesbelow.push((trunkedge,rightedge)); // below
+                        end(leftedge,   1, 0.0, 1); // above
+                        end(trunkedge, -1, 0.0, 1); // above
+                    },
+                    (Side::Left, Dir::Down)  =>  {
+                        sameedgesabove.push((trunkedge,rightedge)); // above
+                        end(leftedge,  -1, 0.0, -1); // below
+                        end(trunkedge,  1, 0.0, -1); // below
+                    },
+                    (Side::Right, Dir::Up)    => {
+                        sameedgesabove.push((trunkedge,leftedge));  // above
+                        end(rightedge,  1, 0.0, -1); // below
+                        end(trunkedge, -1, 0.0, -1); // below
+                    },
+                    (Side::Right, Dir::Down)  => {
+                        sameedgesbelow.push((trunkedge,leftedge));  // below
+                        end(rightedge, -1, 0.0, 1); // above
+                        end(trunkedge,  1, 0.0, 1); // above
+                    },
+                }
+            },
+            Shape::Begin => { println!("begin");
+                end(edge_ports[&(i,Port::Out)],  1, 0.0, 1);
+                end(edge_ports[&(i,Port::Out)],  1, 0.0, -1);
+            },
+            Shape::End   => { println!("end");
+                end(edge_ports[&(i,Port::In)], -1, 0.0, 1);
+                end(edge_ports[&(i,Port::In)], -1, 0.0, -1);
+            },
+            _ => panic!("Unsupported shape"),
+        }
+    }
+
+    let factor = |x:f64| (x*1e5) as isize;
+
+    for (i,(e,s)) in symbols.iter().enumerate() {
+        let left = DiffOffset(Some(symbol_xs[i]),factor(-s.origin));
+        let right = DiffOffset(Some(symbol_xs[i]),factor(-s.origin + s.width));
+        edgelevelsymbols.entry((*e, s.level)).or_insert(Vec::new())
+            .push((s.pos, (left,right)));
+    }
+
+    let els = {
+        use disjoint_sets::*;
+        let mut unionabove = UnionFind::new(edges.len());
+        for (a,b) in sameedgesabove { unionabove.union(a,b); }
+        let mut unionbelow = UnionFind::new(edges.len());
+        for (a,b) in sameedgesbelow { unionbelow.union(a,b); }
+
+        let mut els2 = HashMap::new();
+        for ((e,l),v) in edgelevelsymbols {
+            let e2 = if l == 0 { e } else {
+               if l < 0 { unionbelow.find(e) } else { unionabove.find(e) }
+            };
+
+            els2.entry((e2,l)).or_insert(Vec::new()).extend(v);
+        }
+        els2
+    };
+
+    let mut out = Vec::new();
+    for (k,v) in els {
+        let mut va = v;
+        va.sort_by_key(|(p,_)| OrderedFloat(*p));
+        //println!("sorted {:?} {:?}",k,va);
+        for ((_p1,(_l1,r1)),(_p2,(l2,_r2))) in va.iter().zip(va.iter().skip(1)) {
+            out.push((*r1,*l2));
+        }
+    }
+    out
+}
 

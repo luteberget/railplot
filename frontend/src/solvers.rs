@@ -50,7 +50,8 @@ impl SchematicSolver for LevelsSatSolver {
         edgeorder::trans_red(&mut edges_lt);
         let edges_lt : Vec<(usize,usize)> = edges_lt.into_iter().collect();
 
-        let nodes = model.nodes.iter().map(|n| n.shape.clone()).collect::<Vec<_>>();
+        let nodes = model.nodes.iter().map(|n| levelssat::Node { shape: n.shape.clone(),
+         pos: n.pos }).collect::<Vec<_>>();
         let levelssat::Output { node_coords, edge_levels, symbol_xs } = 
             levelssat::solve(&nodes, &edges, &symbols, &edges_lt)?;
 
