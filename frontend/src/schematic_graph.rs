@@ -17,12 +17,12 @@ impl Dir {
 pub enum Side { Left, Right }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown top/bottom */ }
 
 #[derive(Debug, Copy, Clone)]
+#[allow(dead_code)]
 pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
-
-pub type Level = isize;
 
 #[derive(Debug )]
 pub struct Node {

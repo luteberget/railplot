@@ -132,7 +132,7 @@ fn main() -> Result<(),ExitFailure> {
         })?;
         l.globals().set("load_xml",load_xml)?;
 
-        let plot_network = l.create_function(|ctx, args:rlua::Table| {
+        let plot_network = l.create_function(|_ctx, args:rlua::Table| {
             let m = args.get::<_,rlua::Table>("model")
                 .map_err(|e| format!("Requires model argument. {}", e)).to_lua_err()?;
             let m = schematic_graph::schematic_graph_from_lua(&m)?;

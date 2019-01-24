@@ -9,7 +9,7 @@ pub fn branching_to_schematic_graph<Obj>(model :BranchingModel<Obj>) -> Result<S
     //  2. create nodes at ends and switches 
     //  3. resolve connections, checking dir consistency
 
-    let BranchingModel { tracks, connections, switch_conns } = model;
+    let BranchingModel { tracks, .. } = model;
 
     let mut model = SchematicGraph {
         nodes: Vec::new(),

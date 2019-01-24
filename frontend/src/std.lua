@@ -24,7 +24,9 @@ function concat(a,b)
 end
 
 function extend(a,b)
-    n = #a
-    for _,v in ipairs(b) do n=n+1; a[n]=v end
+    if b ~= nil then
+        n = #a
+        for _,v in ipairs(b) do n=n+1; a[n]=v end
+    end
     return a
 end

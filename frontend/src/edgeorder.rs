@@ -26,8 +26,8 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
         };
 
         let bottom_edge = |n:NodeRef| match (dir, &nodes[n].shape) {
-            (Dir::Up, Shape::Switch(_sd,dir)) => port_edge[&(n,Port::Right)],
-            (Dir::Down, Shape::Switch(_sd,dir) ) => port_edge[&(n,Port::Left)],
+            (Dir::Up, Shape::Switch(_,Dir::Up)) => port_edge[&(n,Port::Right)],
+            (Dir::Down, Shape::Switch(_sd,Dir::Down) ) => port_edge[&(n,Port::Left)],
             _ => panic!(),
         };
 
@@ -96,7 +96,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
 
     for (i,n) in nodes.iter().enumerate() {
         match &n.shape {
-            Shape::Switch(side,dir) => {
+            Shape::Switch(_side,dir) => {
                 let (l,r) = lr(i,*dir);
                 //println!("adding from {:?} {:?} {:?} {:?}", dir, n,l,r);
                 for e_l in &l {
@@ -112,7 +112,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
     lt
 }
 
-pub fn trans_red<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
+pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
     let map = {
         let mut map = HashMap::new();
         for (a,b) in set.iter() {

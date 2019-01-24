@@ -1,5 +1,5 @@
 
-input_file = "../examples/twotrack.railml"
+input_file = "../examples/oneitem.railml"
 input_file_format = "railml"
 
 check(input_file ~= nil, "No input file given.")
