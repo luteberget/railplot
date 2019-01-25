@@ -122,6 +122,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
 
         let both_straight = s.sat.and_literal(vec![e_begin.straight, e_end.straight]);
         // push X values apart
+        println!("sum unary {} {} {}", node_delta_xs.len(), e.a.node, e.b.node);
         let dx = Unary::sum_truncate(&mut s.sat, node_delta_xs[(e.a.node)..(e.b.node)].iter().cloned().collect(), 2);
         s.sat.add_clause(vec![!short_up,            dx. lt_const(2)]);
         s.sat.add_clause(vec![!short_down,          dx. lt_const(2)]);
@@ -186,28 +187,6 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
 
     }
 
-
-     //let print = |m:&SATDiffModel| {
-     //    let mut xs = node_delta_xs.iter().scan(0, |a,x| { *a += m.sat.value(x); Some(*a) }).collect::<Vec<_>>();
-     //    xs.insert(0,0);
- 
-     //    let ys = node_ys.iter().map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
- 
-     //    for (i,x) in xs.iter().enumerate() {
-     //        println!("Node({}): x={}, y={}", i, x, ys[i]);
-     //    }
- 
-     //    let edge_ys = edge_ys.iter().map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
-     //    for (i,_y) in edges.iter().enumerate() {
-     //        println!("Edge({}): y={}", i, edge_ys[i]);
-     //    }
- 
-     //    let z = m.diff.zero();
-     //    println!("Zero={}", m.diff.get_value(z));
-     //};
-
-
-
     println!("($) starting solve ({} dvars, {} dclauses)", s.diff.num_vars(), s.diff.num_constraints());
 
     {
@@ -253,7 +232,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         let x1 = symbol_node_xs[e.a.node];
         let x2 = symbol_node_xs[e.b.node];
         let dy1 = node_y_values[e.a.node] - edge_y_values[i];
-        let dy2 = node_y_values[e.b.node] - edge_y_values[i];
+        let dy2 = edge_y_values[i] - node_y_values[e.b.node];
         let samedir = dy1.signum() == dy2.signum() && dy1.signum() != 0;
         let dist = dy1.abs() + dy2.abs() + if samedir { 0 } else { 1 };
         println!("Edge {:?} dist{} dy{} dy{} {:?} {:?} {}", e,dist,dy1,dy2,x1,x2,-(dist*symbol_factor));

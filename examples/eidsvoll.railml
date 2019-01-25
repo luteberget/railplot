@@ -1,0 +1,650 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<railml version="2.2" xmlns="http://www.railml.org/schemas/2013">
+  <metadata xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <creator xmlns="http://purl.org/dc/elements/1.1/">bjslu</creator>
+    <date xmlns="http://purl.org/dc/elements/1.1/">04/25/2018 12:27:54</date>
+    <source xmlns="http://purl.org/dc/elements/1.1/">RailCOMPLETE v0.12.7.0</source>
+    <format xmlns="http://purl.org/dc/elements/1.1/">railML v2.2</format>
+    <title xmlns="http://purl.org/dc/elements/1.1/">C:\Users\bjslu\Documents\eidsvoll.dwg</title>
+  </metadata>
+  <infrastructure xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="inf0" name="C:\Users\bjslu\Documents\eidsvoll.dwg infrastructure" xmlns="http://www.railml.org/schemas/2013">
+    <tracks>
+      <track id="tr0" code="t1" name="[t1]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg0" pos="0" absPos="0">
+            <geoCoord coord="-337.261937461883 696.740999958527" />
+            <openEnd id="gardermobanen" />
+          </trackBegin>
+          <trackEnd id="end0" pos="3129" absPos="3129">
+            <geoCoord coord="2791.83045309867 696.433178895211" />
+            <openEnd id="dovrebanen" />
+          </trackEnd>
+          <connections>
+            <switch id="sw0" name="V." pos="990" absPos="990" trackContinueCourse="left" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="652.61762807530181 696.4860200327189 0" />
+              <connection id="co1" ref="co0" course="right" orientation="outgoing" />
+            </switch>
+            <switch id="sw1" name="V." pos="2809" absPos="2809" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="2471.8163867385356 696.44108362871282 0" />
+              <connection id="co3" ref="co2" course="left" orientation="incoming" />
+            </switch>
+            <switch id="sw2" name="V." pos="2168" absPos="2168" trackContinueCourse="left" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="1830.4517084581016 696.45692611000368 0" />
+              <connection id="co5" ref="co4" course="right" orientation="outgoing" />
+            </switch>
+          </connections>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc0" name="Start" pos="0" absPos="0" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <signals>
+            <signal id="sig0" name="Hs." pos="200" absPos="200" dir="up" sight="250" type="main">
+              <geoCoord coord="-137.54257946542816 700.2213528006688 0" />
+            </signal>
+            <signal id="sig1" name="Hs." pos="199" absPos="199" dir="down" sight="250" type="main">
+              <geoCoord coord="-137.80035943716481 693.22137812562232 0" />
+            </signal>
+            <signal id="sig2" name="Hs." pos="1335" absPos="1335" dir="down" sight="250" type="main">
+              <geoCoord coord="997.7657909073971 700.10966807355317 0" />
+            </signal>
+            <signal id="sig3" name="Hs." pos="1952" absPos="1952" dir="up" sight="250" type="main">
+              <geoCoord coord="1614.4689117047901 693.04900054038853 0" />
+            </signal>
+            <signal id="sig4" name="Hs." pos="2956" absPos="2956" dir="down" sight="250" type="main">
+              <geoCoord coord="2618.7979764331717 699.95020079399217 0" />
+            </signal>
+          </signals>
+          <trainDetectionElements>
+            <trainDetector id="trd0" name="Tp(-/-)" pos="200" absPos="200" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="-137.632944338705 697.47136167690849 0" />
+            </trainDetector>
+            <trainDetector id="trd1" name="Tp(-/-)" pos="93" absPos="93" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="-244.76104604032327 697.48190028748979 0" />
+            </trainDetector>
+            <trainDetector id="trd2" name="Tp(-/-)" pos="940" absPos="940" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="602.75097549667976 697.3985272134222 0" />
+            </trainDetector>
+            <trainDetector id="trd3" name="Tp(-/-)" pos="1118" absPos="1118" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="781.12413366943429 697.38097994783766 0" />
+            </trainDetector>
+            <trainDetector id="trd4" name="Tp(-/-)" pos="1336" absPos="1336" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="999.00492919175576 695.85954615410651 0" />
+            </trainDetector>
+            <trainDetector id="trd5" name="Tp(-/-)" pos="1952" absPos="1952" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1614.7286957575616 697.29897500497918 0" />
+            </trainDetector>
+            <trainDetector id="trd6" name="Tp(-/-)" pos="2152" absPos="2152" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1814.983070827014 697.2792751984623 0" />
+            </trainDetector>
+            <trainDetector id="trd7" name="Tp(-/-)" pos="2324" absPos="2324" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1986.31518612166 697.262420587819 0" />
+            </trainDetector>
+            <trainDetector id="trd8" name="Tp(-/-)" pos="2693" absPos="2693" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2355.3317451799626 697.22611898485786 0" />
+            </trainDetector>
+            <trainDetector id="trd9" name="Tp(-/-)" pos="2956" absPos="2956" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2618.4596461727215 695.70023405629934 0" />
+            </trainDetector>
+            <trainDetector id="trd10" name="Tp(-/-)" pos="3016" absPos="3016" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2678.9690154445166 695.694281512857 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr1" code="t2" name="[t2]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg1" pos="0" absPos="0">
+            <geoCoord coord="652.617618452396 696.096447712839" />
+            <connection id="co0" ref="co1" />
+          </trackBegin>
+          <trackEnd id="end1" pos="1845" absPos="1845">
+            <geoCoord coord="2471.81636743053 695.659421118449" />
+            <connection id="co2" ref="co3" />
+          </trackEnd>
+          <connections>
+            <switch id="sw3" name="V." pos="1367" absPos="1367" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="2005.5318054502393 637.58415447444236 0" />
+              <connection id="co7" ref="co6" course="left" orientation="outgoing" />
+            </switch>
+            <switch id="sw4" name="V." pos="198" absPos="198" trackContinueCourse="left" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="837.075157342437 637.31653717074448 0" />
+              <connection id="co9" ref="co8" course="right" orientation="outgoing" />
+            </switch>
+            <switch id="sw5" name="V." pos="1325" absPos="1325" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="1963.790837072743 637.5745943376337 0" />
+              <connection id="co11" ref="co10" course="left" orientation="incoming" />
+            </switch>
+            <switch id="sw6" name="V." pos="1628" absPos="1628" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="2266.537925077705 637.64393397426079 0" />
+              <connection id="co13" ref="co12" course="left" orientation="incoming" />
+            </switch>
+          </connections>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc1" name="Start" pos="0" absPos="0" radius="0" />
+            <radiusChange id="rc2" name="OB" pos="32" absPos="32" radius="0" />
+            <radiusChange id="rc3" name="OB" pos="78" absPos="78" radius="0" />
+            <radiusChange id="rc4" name="OB" pos="114" absPos="114" radius="0" />
+            <radiusChange id="rc5" name="OB" pos="179" absPos="179" radius="0" />
+            <radiusChange id="rc6" name="OB" pos="1640" absPos="1640" radius="0" />
+            <radiusChange id="rc7" name="OB" pos="1725" absPos="1725" radius="0" />
+            <radiusChange id="rc8" name="OB" pos="1761" absPos="1761" radius="0" />
+            <radiusChange id="rc9" name="OB" pos="1802" absPos="1802" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <signals>
+            <signal id="sig5" name="Hs." pos="359" absPos="359" dir="down" sight="250" type="main">
+              <geoCoord coord="997.44159425959742 640.85326676681871 0" />
+            </signal>
+            <signal id="sig6" name="Hs." pos="975" absPos="975" dir="up" sight="250" type="main">
+              <geoCoord coord="1614.0394650242247 633.99448898963658 0" />
+            </signal>
+          </signals>
+          <trainDetectionElements>
+            <trainDetector id="trd11" name="Tp(-/-)" pos="130" absPos="130" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="771.13008352341035 653.45295932867828 0" />
+            </trainDetector>
+            <trainDetector id="trd12" name="Tp(-/-)" pos="359" absPos="359" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="997.619845327221 636.60330748105582 0" />
+            </trainDetector>
+            <trainDetector id="trd13" name="Tp(-/-)" pos="976" absPos="976" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1614.7292375617794 638.24464708306357 0" />
+            </trainDetector>
+            <trainDetector id="trd14" name="Tp(-/-)" pos="1344" absPos="1344" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1982.5516310384278 636.82889119376375 0" />
+            </trainDetector>
+            <trainDetector id="trd15" name="Tp(-/-)" pos="1457" absPos="1457" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2095.2811233290995 636.85471017714065 0" />
+            </trainDetector>
+            <trainDetector id="trd16" name="Tp(-/-)" pos="1733" absPos="1733" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2362.6663809505 677.08817275406227 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr2" code="t3x" name="[t3x]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg2" pos="0" absPos="0">
+            <geoCoord coord="1692.08991236218 665.597909492867" />
+            <bufferStop id="bs0" />
+          </trackBegin>
+          <trackEnd id="end2" pos="563" absPos="563">
+            <geoCoord coord="2255.32848533255 664.779808595653" />
+            <bufferStop id="bs1" />
+          </trackEnd>
+          <connections>
+            <switch id="sw7" name="V." pos="389" absPos="389" trackContinueCourse="left" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="2080.8631494803349 665.03321852644069 0" />
+              <connection id="co15" ref="co14" course="right" orientation="incoming" />
+            </switch>
+            <switch id="sw8" name="V." pos="473" absPos="473" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="2165.4097755281641 664.9104150219481 0" />
+              <connection id="co17" ref="co16" course="left" orientation="incoming" />
+            </switch>
+          </connections>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc10" name="Start" pos="0" absPos="0" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <trainDetectionElements>
+            <trainDetector id="trd17" name="Tp(-/-)" pos="263" absPos="263" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1954.742171816576 664.46640775446656 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr3" code="t3xx" name="[t3xx]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg3" pos="0" absPos="0">
+            <geoCoord coord="1830.45171235996 696.614888511172" />
+            <connection id="co4" ref="co5" />
+          </trackBegin>
+          <trackEnd id="end3" pos="256" absPos="256">
+            <geoCoord coord="2080.86242252195 664.532728911109" />
+            <connection id="co14" ref="co15" />
+          </trackEnd>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc11" name="Start" pos="0" absPos="0" radius="0" />
+            <radiusChange id="rc12" name="OB" pos="80" absPos="80" radius="0" />
+            <radiusChange id="rc13" name="OB" pos="131" absPos="131" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <trainDetectionElements>
+            <trainDetector id="trd18" name="Tp(-/-)" pos="114" absPos="114" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1941.1414233468126 680.3237587510738 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr4" code="t3y" name="[t3y]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg4" pos="0" absPos="0">
+            <geoCoord coord="2005.53184454434 637.413463874305" />
+            <connection id="co6" ref="co7" />
+          </trackBegin>
+          <trackEnd id="end4" pos="166" absPos="166">
+            <geoCoord coord="2165.40944563897 664.683295947256" />
+            <connection id="co16" ref="co17" />
+          </trackEnd>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc14" name="Start" pos="0" absPos="0" radius="0" />
+            <radiusChange id="rc15" name="OB" pos="67" absPos="67" radius="0" />
+            <radiusChange id="rc16" name="OB" pos="91" absPos="91" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <trainDetectionElements>
+            <trainDetector id="trd19" name="Tp(-/-)" pos="73" absPos="73" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2077.5328099743933 647.19584303730551 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr5" code="t5" name="[t5]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg5" pos="0" absPos="0">
+            <geoCoord coord="837.075047388525 637.796612175115" />
+            <connection id="co8" ref="co9" />
+          </trackBegin>
+          <trackEnd id="end5" pos="1134" absPos="1134">
+            <geoCoord coord="1963.79094651306 637.096761773108" />
+            <connection id="co10" ref="co11" />
+          </trackEnd>
+          <connections>
+            <switch id="sw9" name="V." pos="509" absPos="509" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="1343.0675589527484 597.78826234812368 0" />
+              <connection id="co19" ref="co18" course="left" orientation="incoming" />
+            </switch>
+          </connections>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc17" name="Start" pos="0" absPos="0" radius="0" />
+            <radiusChange id="rc18" name="OB" pos="64" absPos="64" radius="0" />
+            <radiusChange id="rc19" name="OB" pos="156" absPos="156" radius="0" />
+            <radiusChange id="rc20" name="OB" pos="264" absPos="264" radius="0" />
+            <radiusChange id="rc21" name="OB" pos="852" absPos="852" radius="0" />
+            <radiusChange id="rc22" name="OB" pos="1057" absPos="1057" radius="0" />
+            <radiusChange id="rc23" name="OB" pos="1091" absPos="1091" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <signals>
+            <signal id="sig7" name="Hs." pos="572" absPos="572" dir="down" sight="250" type="main">
+              <geoCoord coord="1405.6532204390683 600.59160322634807 0" />
+            </signal>
+            <signal id="sig8" name="Hs." pos="779" absPos="779" dir="up" sight="250" type="main">
+              <geoCoord coord="1612.7355593848379 591.2853579336587 0" />
+            </signal>
+          </signals>
+          <trainDetectionElements>
+            <trainDetector id="trd20" name="Tp(-/-)" pos="1049" absPos="1049" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1881.5070236566967 614.669020155152 0" />
+            </trainDetector>
+            <trainDetector id="trd21" name="Tp(-/-)" pos="779" absPos="779" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1613.265895070733 595.52971623034637 0" />
+            </trainDetector>
+            <trainDetector id="trd22" name="Tp(-/-)" pos="572" absPos="572" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1406.1620021439971 596.33567461080588 0" />
+            </trainDetector>
+            <trainDetector id="trd23" name="Tp(-/-)" pos="393" absPos="393" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1226.6633156810622 598.33434873047418 0" />
+            </trainDetector>
+            <trainDetector id="trd24" name="Tp(-/-)" pos="103" absPos="103" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="939.23939339993524 623.33744945526632 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr6" code="t99" name="[t99]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg6" pos="0" absPos="0">
+            <geoCoord coord="-828.53017330848 427.090978226714" />
+            <openEnd id="hovedbanen" />
+          </trackBegin>
+          <trackEnd id="end6" pos="3175" absPos="3175">
+            <geoCoord coord="2266.53808401494 636.949990544596" />
+            <connection id="co12" ref="co13" />
+          </trackEnd>
+          <connections>
+            <switch id="sw10" name="V." pos="719" absPos="719" trackContinueCourse="right" trackContinueRadius="0" model="Ikke-spesifisert" type="other:unspecified">
+              <geoCoord coord="-109.49762259521162 420.52331646606871 0" />
+              <connection id="co21" ref="co20" course="left" orientation="outgoing" />
+            </switch>
+          </connections>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc24" name="Start" pos="0" absPos="0" radius="0" />
+            <radiusChange id="rc25" name="OB" pos="2463" absPos="2463" radius="0" />
+            <radiusChange id="rc26" name="OB" pos="2968" absPos="2968" radius="0" />
+            <radiusChange id="rc27" name="OB" pos="3047" absPos="3047" radius="0" />
+            <radiusChange id="rc28" name="OB" pos="3081" absPos="3081" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <signals>
+            <signal id="sig9" name="Hs." pos="952" absPos="952" dir="down" sight="250" type="main">
+              <geoCoord coord="123.59527586513229 414.89409395274572 0" />
+            </signal>
+            <signal id="sig10" name="Hs." pos="380" absPos="380" dir="up" sight="250" type="main">
+              <geoCoord coord="-448.20121920446041 420.11689780469175 0" />
+            </signal>
+            <signal id="sig11" name="Hs." pos="3030" absPos="3030" dir="up" sight="250" type="main">
+              <geoCoord coord="2141.719608713157 595.86388941636324 0" />
+            </signal>
+          </signals>
+          <trainDetectionElements>
+            <trainDetector id="trd25" name="Tp(-/-)" pos="3030" absPos="3030" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="2137.5993144551421 596.90977858483268 0" />
+            </trainDetector>
+            <trainDetector id="trd26" name="Tp(-/-)" pos="952" absPos="952" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="122.96608735764903 419.15001826266564 0" />
+            </trainDetector>
+            <trainDetector id="trd27" name="Tp(-/-)" pos="654" absPos="654" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="-174.41369949969112 420.36623029178685 0" />
+            </trainDetector>
+            <trainDetector id="trd28" name="Tp(-/-)" pos="380" absPos="380" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="-448.14985306353128 424.36660591099758 0" />
+            </trainDetector>
+            <trainDetector id="trd29" name="Tp(-/-)" pos="222" absPos="222" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="rightRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="-606.9013491091323 425.81664614768744 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+      <track id="tr7" code="t87" name="[t87]" type="mainTrack">
+        <trackTopology>
+          <trackBegin id="beg7" pos="0" absPos="0">
+            <geoCoord coord="-109.497282722514 420.560525984743" />
+            <connection id="co20" ref="co21" />
+          </trackBegin>
+          <trackEnd id="end7" pos="1476" absPos="1476">
+            <geoCoord coord="1343.06075948174 597.17760946425" />
+            <connection id="co18" ref="co19" />
+          </trackEnd>
+        </trackTopology>
+        <trackElements>
+          <radiusChanges>
+            <radiusChange id="rc29" name="Start" pos="0" absPos="0" radius="0" />
+            <radiusChange id="rc30" name="OB" pos="152" absPos="152" radius="0" />
+            <radiusChange id="rc31" name="OB" pos="333" absPos="333" radius="0" />
+            <radiusChange id="rc32" name="OB" pos="770" absPos="770" radius="0" />
+            <radiusChange id="rc33" name="OB" pos="952" absPos="952" radius="0" />
+            <radiusChange id="rc34" name="OB" pos="1207" absPos="1207" radius="0" />
+            <radiusChange id="rc35" name="OB" pos="1305" absPos="1305" radius="0" />
+            <radiusChange id="rc36" name="OB" pos="1376" absPos="1376" radius="0" />
+          </radiusChanges>
+        </trackElements>
+        <ocsElements>
+          <signals>
+            <signal id="sig12" name="Hs." pos="297" absPos="297" dir="down" sight="250" type="main">
+              <geoCoord coord="184.77140139600414 453.99424373030564 0" />
+            </signal>
+            <signal id="sig13" name="Hs." pos="1335" absPos="1335" dir="up" sight="250" type="main">
+              <geoCoord coord="1203.4529070001013 576.50794108171408 0" />
+            </signal>
+          </signals>
+          <trainDetectionElements>
+            <trainDetector id="trd30" name="Tp(-/-)" pos="1335" absPos="1335" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="1203.3362078185326 579.277769181337 0" />
+            </trainDetector>
+            <trainDetector id="trd31" name="Tp(-/-)" pos="297" absPos="297" dir="unknown" detectionObject="axle" medium="magnetic" posInTrack="leftRail" directionDetection="false" axleCounting="true">
+              <geoCoord coord="185.40772180623358 449.79185807396834 0" />
+            </trainDetector>
+          </trainDetectionElements>
+        </ocsElements>
+        <infraAttrGroupRefs />
+      </track>
+    </tracks>
+    <trackGroups>
+      <line id="line0">
+        <trackRef ref="tr0" />
+        <trackRef ref="tr1" />
+        <trackRef ref="tr2" />
+        <trackRef ref="tr3" />
+        <trackRef ref="tr4" />
+        <trackRef ref="tr5" />
+        <trackRef ref="tr6" />
+        <trackRef ref="tr7" />
+      </line>
+    </trackGroups>
+  </infrastructure>
+  <infrastructureVisualizations xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.railml.org/schemas/2013">
+    <visualization version="2.2" infrastructureRef="inf0" id="iv0">
+      <lineVis ref="line0">
+        <trackVis ref="tr0">
+          <trackElementVis ref="oe0">
+            <position x="50" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="beg0">
+            <position x="50" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="rc0">
+            <position x="50" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sig0">
+            <position x="170" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sig1">
+            <position x="170" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sw0">
+            <position x="950" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sig2">
+            <position x="1070" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sig3">
+            <position x="1250" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sw2">
+            <position x="1310" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sw1">
+            <position x="1370" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="sig4">
+            <position x="1430" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="oe1">
+            <position x="1550" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="end0">
+            <position x="1550" y="700" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr1">
+          <trackElementVis ref="co0">
+            <position x="950" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="beg1">
+            <position x="950" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="rc1">
+            <position x="50" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="sw4">
+            <position x="110" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="sig5">
+            <position x="290" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="sig6">
+            <position x="890" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="sw5">
+            <position x="1010" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="sw3">
+            <position x="1130" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="sw6">
+            <position x="1190" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="co2">
+            <position x="1370" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="end1">
+            <position x="1370" y="700" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr2">
+          <trackElementVis ref="bs0">
+            <position x="50" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="beg2">
+            <position x="50" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="rc10">
+            <position x="50" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="sw7">
+            <position x="410" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="sw8">
+            <position x="470" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="bs1">
+            <position x="590" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="end2">
+            <position x="590" y="650" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr3">
+          <trackElementVis ref="co4">
+            <position x="1310" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="beg3">
+            <position x="1310" y="700" />
+          </trackElementVis>
+          <trackElementVis ref="rc11">
+            <position x="50" y="750" />
+          </trackElementVis>
+          <trackElementVis ref="co14">
+            <position x="410" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="end3">
+            <position x="410" y="650" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr4">
+          <trackElementVis ref="co6">
+            <position x="1130" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="beg4">
+            <position x="1130" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="rc14">
+            <position x="50" y="400" />
+          </trackElementVis>
+          <trackElementVis ref="co16">
+            <position x="470" y="650" />
+          </trackElementVis>
+          <trackElementVis ref="end4">
+            <position x="470" y="650" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr5">
+          <trackElementVis ref="co8">
+            <position x="110" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="beg5">
+            <position x="110" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="rc17">
+            <position x="50" y="500" />
+          </trackElementVis>
+          <trackElementVis ref="sw9">
+            <position x="530" y="500" />
+          </trackElementVis>
+          <trackElementVis ref="sig7">
+            <position x="650" y="500" />
+          </trackElementVis>
+          <trackElementVis ref="sig8">
+            <position x="770" y="500" />
+          </trackElementVis>
+          <trackElementVis ref="co10">
+            <position x="1010" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="end5">
+            <position x="1010" y="600" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr6">
+          <trackElementVis ref="oe2">
+            <position x="50" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="beg6">
+            <position x="50" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="rc24">
+            <position x="50" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="sig10">
+            <position x="350" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="sw10">
+            <position x="710" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="sig9">
+            <position x="830" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="sig11">
+            <position x="1490" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="co12">
+            <position x="1190" y="600" />
+          </trackElementVis>
+          <trackElementVis ref="end6">
+            <position x="1190" y="600" />
+          </trackElementVis>
+        </trackVis>
+        <trackVis ref="tr7">
+          <trackElementVis ref="co20">
+            <position x="710" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="beg7">
+            <position x="710" y="450" />
+          </trackElementVis>
+          <trackElementVis ref="rc29">
+            <position x="50" y="550" />
+          </trackElementVis>
+          <trackElementVis ref="sig12">
+            <position x="230" y="550" />
+          </trackElementVis>
+          <trackElementVis ref="sig13">
+            <position x="1070" y="550" />
+          </trackElementVis>
+          <trackElementVis ref="co18">
+            <position x="530" y="500" />
+          </trackElementVis>
+          <trackElementVis ref="end7">
+            <position x="530" y="500" />
+          </trackElementVis>
+        </trackVis>
+      </lineVis>
+    </visualization>
+  </infrastructureVisualizations>
+</railml>

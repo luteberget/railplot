@@ -1,5 +1,5 @@
 
-input_file = "../examples/twotrack.railml"
+input_file = "../examples/split.railml"
 input_file_format = "railml"
 
 check(input_file ~= nil, "No input file given.")
@@ -17,10 +17,11 @@ model = load_railml {
         return objs
     end,
 
-    get_pos = function(o) return o.pos end,
+    get_pos = function(o) return o.absPos or o.pos end,
 
     symbol_info = function(o) 
-        return { pos = o.absPos or o.pos, width=0.4, origin = 0.0,level=1 }
+        level = o.dir == "up" and -1 or 1
+        return { pos = o.absPos or o.pos, width=0.4, origin = 0.0,level=level }
     end,
 }
 
@@ -28,12 +29,15 @@ output = plot_network {
     model=model,
 }
 
-print(tikz_tracks   { data = output, style = "ultra thick, black" })
-print(tikz_switches { data = output, style = "yellow" })
-print(tikz_symbols  { data = output, draw = function(o) 
+
+tikz = ""
+tikz = tikz .. (tikz_tracks   { data = output, style = "ultra thick, black" })
+tikz = tikz .. (tikz_switches { data = output, style = "" })
+tikz = tikz .. (tikz_symbols  { data = output, draw = function(o) 
     x0,y0 = -o._symbol_info.origin, 0
-    x1,y1 = o._symbol_info.width, 0.25
+    x1,y1 = o._symbol_info.width, -0.25*o._symbol_info.level
     return "\\draw ("..x0..","..y0..") rectangle ("..x1..","..y1..");"
 end })
 
-
+--print(tikz)
+tikzpdf("schematic",tikz)

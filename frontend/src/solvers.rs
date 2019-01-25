@@ -30,6 +30,7 @@ impl SchematicSolver for LevelsSatSolver {
     fn solve<Obj:Clone>(self, mut model:SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String> {
         // Convert 
         model.nodes.sort_by_key(|n| OrderedFloat(n.pos));
+        println!("NODES {:#?}", model.nodes);
         let node_names = model.nodes.iter().enumerate()
             .map(|(i,n)| (n.name.clone(), i)).collect::<HashMap<_,_>>();
         model.edges.sort_by_key(|e| (node_names[&e.a.0], node_names[&e.b.0]));
@@ -109,22 +110,27 @@ fn convert_symbol_coords(symbols :&[(usize,&Symbol)], symbol_xs :&[f64], edge_li
     fn scale(s:f64, (x,y):Pt) -> Pt { (s*x,s*y) }
 
     fn line_tangent_at_x(l :&[Pt], x :f64) -> Result<Pt,()> {
+        println!("finding line tangent {:?} {:?}", l, x);
         l.binary_search_by_key(&OrderedFloat(x), |(x0,_y0)| OrderedFloat(*x0))
-            .map(|i| l[i]).or_else(|i| {
+            .map(|i| (l[i+1].0 - l[i].0, l[i+1].1 - l[i].1)).or_else(|i| {
                 if i == 0 || i == l.len() { Err(()) }
                 else {
                     let (dx,dy) = (l[i].0-l[i-1].0, l[i].1-l[i-1].1);
-                    let len = (dx*dx+dy*dy).sqrt();
-                    Ok((dx/len,dy/len))
+                    Ok((dx,dy))
                 }})
+    }
+    fn normalize((x,y) :Pt) -> Pt {
+        let len = (x*x+y*y).sqrt();
+        (x/len,y/len)
     }
 
     let mut output = Vec::new();
     for (i,(ei,s)) in symbols.iter().enumerate() {
         let line_pt = line_pt_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap();
-        let line_tangent  = line_tangent_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap();
+        let line_tangent  = normalize(line_tangent_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap());
         let pt = addpt(line_pt, scale(0.25*(s.level as f64),rot90(line_tangent)));
 
+        println!("SYMBOL {:?} {:?}", pt, line_tangent);
         output.push((pt,line_tangent));
     }
 
@@ -217,7 +223,6 @@ pub fn polyline_to_lua<'l>(ctx :rlua::Context<'l>, ls :Vec<(f64,f64)>) -> Result
     ctx.create_sequence_from(ls.into_iter().map(|pt| point_to_lua(ctx,pt))
             .collect::<Result<Vec<_>,_>>()?)
 }
-
 
 pub fn polyline_from_lua<'l>(ls :rlua::Table<'l>) -> Result<Vec<(f64,f64)>,rlua::Error> {
     ls.sequence_values().map(|pt| point_from_lua(pt?)).collect::<Result<Vec<_>,_>>()

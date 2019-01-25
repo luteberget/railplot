@@ -116,6 +116,8 @@ fn main() -> Result<(),ExitFailure> {
         g.set("tikz_switches", l.create_function(tikz_output::tikz_switches)?)?;
         g.set("tikz_symbols", l.create_function(tikz_output::tikz_symbols)?)?;
 
+        g.set("tikzpdf", l.create_function(tikzpdf)?)?;
+
         use crate::xml::lua_to_json;
         let to_json = l.create_function(|ctx, obj :rlua::Value| {
             let json = lua_to_json(ctx,obj).to_lua_err()?;
@@ -262,4 +264,28 @@ fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua
     let output = solver.solve(m).to_lua_err()?;
     let lua_output = solvers::output_to_lua(ctx, output)?;
     Ok(lua_output)
+}
+
+fn tikzpdf<'l>(_ctx :rlua::Context<'l>, (filename,text,preamble):(String,String,Option<String>)) -> Result<(),rlua::Error> {
+    let mut input = String::new();
+    input.push_str(r#"\documentclass[tikz,margin=5mm]{standalone} \usepackage{pgfplots,amsmath}"#);
+    if let Some(pre) = preamble { input.push_str(&pre); }
+    input.push_str(r#"\begin{document} \begin{tikzpicture}"#);
+    input.push_str(&text);
+    input.push_str(r#"\end{tikzpicture} \end{document}"#);
+
+    use std::process;
+
+    let mut proc = process::Command::new("pdflatex")
+        .args(&["-jobname",&filename])
+        .stdin(process::Stdio::piped())
+        .spawn().to_lua_err()?;
+
+    {
+        let stdin = proc.stdin.as_mut().ok_or(format!("Failed to open pdflatex input pipe.")).to_lua_err()?;
+        use std::io::Write;
+        stdin.write_all(input.as_bytes()).to_lua_err()?;
+    }
+    proc.wait().to_lua_err()?;
+    Ok(())
 }

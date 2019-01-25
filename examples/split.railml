@@ -25,8 +25,8 @@
                 </signals>
                 <trainDetectionElements>
                     <trainDetector id="d0" name="detector 1" pos="10.0" />
-                    <trainDetector id="d1" name="detector 1" pos="50.0" />
-                    <trainDetector id="d2" name="detector 2" pos="250.0" />
+                    <trainDetector id="d1" name="detector 1" pos="360.0" />
+                    <trainDetector id="d2" name="detector 2" pos="370.0" />
                     <trainDetector id="d3" name="detector 2" pos="350.0" />
                     <trainDetector id="d4" name="detector 2" pos="390.0" />
                 </trainDetectionElements>
