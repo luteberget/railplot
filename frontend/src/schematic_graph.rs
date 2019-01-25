@@ -98,32 +98,40 @@ fn shape_from_string(s :String) -> Shape {
     }
 }
 
+pub fn edge_to_lua<'l>(ctx :rlua::Context<'l>, e :Edge<rlua::Value<'l>>) -> Result<rlua::Table<'l>,rlua::Error> {
+    let edge_lua :rlua::Table = ctx.create_table()?;
+    edge_lua.set("node_a", e.a.0)?;
+    edge_lua.set("node_b", e.b.0)?;
+    edge_lua.set("port_a", port_to_string(e.a.1))?;
+    edge_lua.set("port_b", port_to_string(e.b.1))?;
+    let os = e.objects.into_iter().map(|(s,o)| {
+        match o.clone() {
+            rlua::Value::Table(t) => {
+                t.set::<_,rlua::Value>("_symbol_info", symbol_to_lua(&ctx, &s)?)?;
+            },
+            _ => panic!(),
+        }
+        Ok(o)
+    }).collect::<Result<Vec<_>,_>>()?;
+    edge_lua.set("objects", ctx.create_sequence_from(os)?)?;
+    Ok(edge_lua)
+}
+
+pub fn node_to_lua<'l>(ctx :rlua::Context<'l>, n :Node) -> Result<rlua::Table<'l>,rlua::Error> {
+    let node_lua :rlua::Table = ctx.create_table()?;
+    node_lua.set("name",n.name)?;
+    node_lua.set("pos",n.pos)?;
+    node_lua.set("shape",shape_to_string(n.shape))?;
+    Ok(node_lua)
+}
+
 pub fn schematic_graph_to_lua<'l>(ctx :rlua::Context<'l>, schematic :SchematicGraph<rlua::Value<'l>>) -> Result<rlua::Value<'l>, rlua::Error> {
     let node_tbls :Vec<rlua::Table> = schematic.nodes.into_iter().map(|n| {
-        let node_lua :rlua::Table = ctx.create_table()?;
-        node_lua.set("name",n.name)?;
-        node_lua.set("pos",n.pos)?;
-        node_lua.set("shape",shape_to_string(n.shape))?;
-        Ok(node_lua)
+        node_to_lua(ctx,n)
     }).collect::<Result<Vec<_>,_>>()?;
 
     let edge_tbls :Vec<rlua::Table> = schematic.edges.into_iter().map(|e| {
-        let edge_lua :rlua::Table = ctx.create_table()?;
-        edge_lua.set("node_a", e.a.0)?;
-        edge_lua.set("node_b", e.b.0)?;
-        edge_lua.set("port_a", port_to_string(e.a.1))?;
-        edge_lua.set("port_b", port_to_string(e.b.1))?;
-        let os = e.objects.into_iter().map(|(s,o)| {
-            match o.clone() {
-                rlua::Value::Table(t) => {
-                    t.set::<_,rlua::Value>("_symbol_info", symbol_to_lua(&ctx, &s)?)?;
-                },
-                _ => panic!(),
-            }
-            Ok(o)
-        }).collect::<Result<Vec<_>,_>>()?;
-        edge_lua.set("objects", ctx.create_sequence_from(os)?)?;
-        Ok(edge_lua)
+        edge_to_lua(ctx,e)
     }).collect::<Result<Vec<_>,_>>()?;
 
     let model = ctx.create_table()?;

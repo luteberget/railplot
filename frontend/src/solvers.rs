@@ -97,7 +97,6 @@ fn convert_symbol_coords(symbols :&[(usize,&Symbol)], symbol_xs :&[f64], edge_li
     }
 
     fn line_pt_at_x(l :&[Pt], x: f64) -> Result<Pt,()> {
-        //println!("{:?}", (l,x));
         l.binary_search_by_key(&OrderedFloat(x), |(x0,_y0)| OrderedFloat(*x0))
          .map(|i| l[i]).or_else(|i| {
              if i == 0 || i == l.len() { Err(()) }
@@ -166,7 +165,47 @@ pub fn conv_line((x1,y1) :(f64,f64), l :f64, (x2,y2) :(f64,f64)) -> Vec<(f64,f64
 
 
 
-pub fn output_to_lua(model :SchematicOutput<rlua::Value>) -> Result<rlua::Value,rlua::Error> {
-    println!("{}", model.symbols.len());
-    unimplemented!()
+pub fn output_to_lua<'l>(ctx :rlua::Context<'l>, model :SchematicOutput<rlua::Value<'l>>) -> Result<rlua::Value<'l>,rlua::Error> {
+
+    // convert nodes
+
+    let node_tbls :Vec<rlua::Table> = model.nodes.into_iter().map(|(n,(x,y))| {
+        let t = node_to_lua(ctx, n)?;
+        t.set("x",x)?;
+        t.set("y",y)?;
+        Ok(t)
+    }).collect::<Result<Vec<_>,_>>()?;
+
+
+    // convert edges
+    let edge_tbls :Vec<rlua::Table> = model.lines.into_iter().map(|(e,ls)| {
+        let t = edge_to_lua(ctx,e)?;
+        t.set("line", polyline_to_lua(ctx, ls)?)?;
+        Ok(t)
+    }).collect::<Result<Vec<_>,_>>()?;
+
+    // convert symbols
+    let symbol_tbls :Vec<rlua::Table> = model.symbols.into_iter().map(|(obj,(pt,tan))| {
+        match obj {
+            rlua::Value::Table(t) => {
+                t.set("point", ctx.create_sequence_from(vec![pt.0,pt.1])?)?;
+                t.set("tangent", ctx.create_sequence_from(vec![tan.0,tan.1])?)?;
+                Ok(t)
+            },
+            _ => panic!("Symbol must be Lua table type."),
+        }
+    }).collect::<Result<Vec<_>,_>>()?;
+
+
+    let lua_model = ctx.create_table()?;
+    lua_model.set("nodes",node_tbls)?;
+    lua_model.set("edges",edge_tbls)?;
+    lua_model.set("symbols",symbol_tbls)?;
+    Ok(rlua::Value::Table(lua_model))
+}
+
+pub fn polyline_to_lua<'l>(ctx :rlua::Context<'l>, ls :Vec<(f64,f64)>) -> Result<rlua::Table<'l>,rlua::Error> {
+    ctx.create_sequence_from(ls.into_iter().map(|pt| 
+                ctx.create_sequence_from(vec![pt.0,pt.1]))
+            .collect::<Result<Vec<_>,_>>()?)
 }

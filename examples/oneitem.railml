@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<railml xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.railml.org/schemas/2013">
+  <infrastructure>
+    <tracks>
+        <track name="SP1">
+            <trackTopology>
+                <trackBegin pos="0.0">
+                    <openEnd id="b1" />
+                </trackBegin>
+                <trackEnd pos="1000.0">
+                    <openEnd id="b2" />
+                </trackEnd>
+                <connections>
+                </connections>
+            </trackTopology>
+            <ocsElements>
+                <signals>
+                    <signal id="sig1" name="Signal 1" pos="50.0" type="main"  dir="up"/>
+                    <signal id="sig2" name="Signal 2" pos="60.0" type="main"  dir="up"/>
+                    <signal id="sig3" name="Signal 3" pos="70.0" type="main"  dir="up"/>
+                    <signal id="sig4" name="Signal 4" pos="80.0" type="main"  dir="up"/>
+                    <signal id="sig5" name="Signal 5" pos="100.0" type="main"  dir="down"/>
+                    <signal id="sig6" name="Signal 6" pos="110.0" type="main"  dir="down"/>
+                    <signal id="sig7" name="Signal 7" pos="120.0" type="main"  dir="down"/>
+                    <signal id="sig8" name="Signal 8" pos="130.0" type="main"  dir="down"/>
+                </signals>
+            </ocsElements>
+        </track>
+    </tracks>
+  </infrastructure>
+</railml>

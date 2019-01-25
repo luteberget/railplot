@@ -43,6 +43,8 @@ output = plot_network {
     model=model,
 }
 
+print("Got output")
+print(dump(output))
 
 --print(to_json(output, { pretty = true }))
 
