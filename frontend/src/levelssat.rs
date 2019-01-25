@@ -328,13 +328,14 @@ fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool) -> PortShap
 }
 
 fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff, x :Unary) -> Result<(), String> {
+    println!("(^) Optimizing {}", name);
     let (mut lo, mut hi) = (0,x.bound());
     while lo < hi {
         let mid = (hi-lo)/2 + lo;
-        println!("Constraint on {}", mid);
+        println!("Constraint on {}={}", name, mid);
         match s.solve_under_assumptions(&vec![x.lte_const(mid as isize)]) {
-            Ok(_) => { println!("(^) successful bends <= {}", mid); hi = mid; }
-            Err(_) => { println!("(^) unsuccessful bends <= {}", mid); lo = mid+1; }
+            Ok(_) => { println!("(^) successful {} <= {}", name, mid); hi = mid; }
+            Err(_) => { println!("(^) unsuccessful {} <= {}", name, mid); lo = mid+1; }
         }
     }
     assert_eq!(lo,hi);

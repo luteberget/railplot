@@ -204,8 +204,21 @@ pub fn output_to_lua<'l>(ctx :rlua::Context<'l>, model :SchematicOutput<rlua::Va
     Ok(rlua::Value::Table(lua_model))
 }
 
+pub fn point_to_lua<'l>(ctx :rlua::Context<'l>, (x,y) :(f64,f64)) -> Result<rlua::Table<'l>, rlua::Error> {
+    ctx.create_sequence_from(vec![x,y])
+}
+
+pub fn point_from_lua(t :rlua::Table) -> Result<(f64,f64), rlua::Error> {
+    let x = t.sequence_values().collect::<Result<Vec<f64>,_>>()?;
+    Ok((x[0],x[1]))
+}
+
 pub fn polyline_to_lua<'l>(ctx :rlua::Context<'l>, ls :Vec<(f64,f64)>) -> Result<rlua::Table<'l>,rlua::Error> {
-    ctx.create_sequence_from(ls.into_iter().map(|pt| 
-                ctx.create_sequence_from(vec![pt.0,pt.1]))
+    ctx.create_sequence_from(ls.into_iter().map(|pt| point_to_lua(ctx,pt))
             .collect::<Result<Vec<_>,_>>()?)
+}
+
+
+pub fn polyline_from_lua<'l>(ls :rlua::Table<'l>) -> Result<Vec<(f64,f64)>,rlua::Error> {
+    ls.sequence_values().map(|pt| point_from_lua(pt?)).collect::<Result<Vec<_>,_>>()
 }

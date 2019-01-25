@@ -74,7 +74,7 @@ fn port_from_string(s :String) -> Port {
     }
 }
 
-fn shape_to_string(s :Shape) -> &'static str {
+pub fn shape_to_string(s :Shape) -> &'static str {
     match s {
         Shape::Begin => "begin",
         Shape::End => "end",
@@ -86,7 +86,7 @@ fn shape_to_string(s :Shape) -> &'static str {
     }
 }
 
-fn shape_from_string(s :String) -> Shape {
+pub fn shape_from_string(s :String) -> Shape {
     match s.as_str() {
         "begin" => Shape::Begin,
         "end" => Shape::End,

@@ -16,3 +16,4 @@ quick-xml="*"
 ordered-float="*"
 diffsolver = {path = "../diffsolver"}
 disjoint-sets="*"
+itertools = "*"
