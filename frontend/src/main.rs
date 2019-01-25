@@ -154,6 +154,19 @@ fn main() -> Result<(),ExitFailure> {
         })?;
         l.globals().set("plot_network",plot_network)?;
 
+        use crate::xml::lua_to_json;
+        let to_json = l.create_function(|ctx, obj :rlua::Value| {
+            let json = lua_to_json(ctx,obj).to_lua_err()?;
+            Ok(serde_json::to_string(&json).to_lua_err()?)
+        })?;
+        l.globals().set("to_json",to_json)?;
+        let to_json_pretty = l.create_function(|ctx, obj :rlua::Value| {
+            let json = lua_to_json(ctx,obj).to_lua_err()?;
+            Ok(serde_json::to_string_pretty(&json).to_lua_err()?)
+        })?;
+        l.globals().set("to_json_pretty",to_json_pretty)?;
+
+
         let load_railml = l.create_function(|ctx, args:rlua::Table| {
             use crate::railml::*;
             use crate::schematic_graph::*;

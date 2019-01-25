@@ -1,5 +1,36 @@
-
 use failure::ResultExt;
+
+pub fn lua_to_json<'l>(ctx: rlua::Context<'l>, x :rlua::Value) -> Result<serde_json::Value, failure::Error> {
+    match x {
+        rlua::Value::Nil => Ok(serde_json::Value::Null),
+        rlua::Value::Boolean(b) => Ok(serde_json::Value::Bool(b)),
+        rlua::Value::LightUserData(_) => Ok(serde_json::Value::String(format!("<lightuserdata>"))),
+        rlua::Value::Function(_) => Ok(serde_json::Value::String(format!("<function>"))),
+        rlua::Value::Thread(_) => Ok(serde_json::Value::String(format!("<thread>"))),
+        rlua::Value::UserData(_) => Ok(serde_json::Value::String(format!("<userdata>"))),
+        rlua::Value::Error(_) => Ok(serde_json::Value::String(format!("<error>"))),
+        rlua::Value::String(s) => Ok(serde_json::Value::String(s.to_str()?.into())),
+        rlua::Value::Number(f) => Ok(serde_json::Number::from_f64(f)
+               .map(serde_json::Value::Number)
+               .unwrap_or_else(|| serde_json::Value::String(format!("<NaN>")))),
+        rlua::Value::Integer(i) => Ok(serde_json::Value::Number(i.into())),
+        rlua::Value::Table(t) => {
+            if let rlua::Value::Nil = t.get::<i64,rlua::Value>(1)? {
+                let mut map = serde_json::Map::new();
+                for r in t.pairs() {
+                    let (k,v) = r?;
+                    let json_val :serde_json::Value = lua_to_json(ctx, v)?;
+                    map.insert(k,json_val);
+                }
+                Ok(serde_json::Value::Object(map))
+            } else {
+                Ok(serde_json::Value::Array(t.sequence_values()
+                                            .map(|v| lua_to_json(ctx, v?))
+                                            .collect::<Result<Vec<_>,_>>()?))
+            }
+        },
+    }
+}
 
 pub fn json_to_lua<'lua>(ctx: rlua::Context<'lua>, x :serde_json::Value) -> Result<rlua::Value<'lua>,failure::Error> {
     match x {

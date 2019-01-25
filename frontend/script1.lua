@@ -44,7 +44,7 @@ output = plot_network {
 }
 
 print("Got output")
-print(dump(output))
+print(to_json_pretty(output))
 
 --print(to_json(output, { pretty = true }))
 
