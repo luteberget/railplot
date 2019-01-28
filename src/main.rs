@@ -36,44 +36,45 @@ mod railml;
 mod tikz_output;
 
 #[derive(Debug, StructOpt)]
-#[structopt(about = "Linear schematic railway drawings")]
+#[structopt(about = "Linear schematic railway drawings.\nSee manual at https://github.com/luteberget/railplot/.")]
 struct Opt {
     /// Verbose mode (-v, -vv, -vvv, etc.)
     #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
     verbose: u8,
 
-    //
-    // /// Activate debug mode
-    // #[structopt(short = "d", long = "debug")]
-    // debug: bool,
-
-    ///// Input format
-    //#[structopt(short = "f", long = "format", parse(try_from_str="parse_input_format"))]
-    //input_format :Option<InputFormat>,
-
-    ///// Output format
-    //#[structopt(short = "t", long = "to", parse(try_from_str="parse_output_format"))]
-    //output_format :Option<OutputFormat>,
-
-    ///// Input file
-    //#[structopt(parse(from_os_str))]
-    //input: Option<PathBuf>,
-
-    /// Script file
+    /// Input file
     #[structopt(parse(from_os_str))]
-    script: PathBuf,
+    input :PathBuf,
 
-    ///// Output file, stdout if not present
-    //#[structopt(parse(from_os_str))]
-    //output: Option<PathBuf>,
+    /// Output file
+    #[structopt(parse(from_os_str))]
+    output :PathBuf,
 
+    /// Input format: railml or sgraph
+    #[structopt(short="f", long="from")]
+    from_format :Option<String>,
+
+    /// Output format: json, svg, tikz, or pdf
+    #[structopt(short="t", long="to")]
+    to_format :Option<String>,
+
+    /// Use a custom script file instead of the default
+    #[structopt(short="s", long="script")]
+    script :Option<String>,
+
+    /// Dump the default script file (see the --script flag)
+    #[structopt(short="d", long="dump-script")]
+    dump_script :bool,
+
+    /// Title to be written on the output graphic.
+    #[structopt(short="h",long="title")]
+    title :Option<String>,
 }
 
-//struct Object {
-//    // json object here?
-//}
-
 fn main() -> Result<(),ExitFailure> {
+    use std::fs;
+    use rlua::prelude::*;
+
     let opt = Opt::from_args();
 
     // Setup logging, use environment variable if available, otherwise command line switches.
@@ -93,18 +94,61 @@ fn main() -> Result<(),ExitFailure> {
     }
 
 
-    use std::fs;
-    let script_file_contents = fs::read_to_string(&opt.script).expect("Could not read file.");
+    let default_script = include_str!("default.lua");
 
-    use rlua::prelude::*;
+    if opt.dump_script {
+        println!("{}", default_script);
+        return Ok(());
+    }
+
+    let (script,script_name) = if let Some(ref filename) = &opt.script {
+        (fs::read_to_string(filename)
+            .context("Could not read script file")?,
+         filename.as_str())
+    } else {
+        (default_script.to_string(),"railplot-default.lua")
+    };
+
     let lua = Lua::new();
     lua.context::<_,Result<(),failure::Error>>(|l| {
+        let g = l.globals();
+
+        // Set variables from command line info
+        if let Some(ref t) = &opt.title {
+            g.set("title",t.as_str())?;
+        }
+        if let Some(ref f) = &opt.from_format {
+            g.set("from_format",f.as_str())?;
+        } else {
+            let s = opt.input.to_string_lossy();
+            if s.ends_with("railml") || s.ends_with("xml") {
+                g.set("from_format", "railml")?;
+            } else if s.ends_with("sgraph") {
+                g.set("from_format", "sgraph")?;
+            }
+        }
+        if let Some(ref f) = &opt.to_format {
+            g.set("to_format",f.as_str())?;
+        } else {
+            let s = opt.output.to_string_lossy();
+            if s.ends_with("json") { g.set("output_format", "json")?; }
+            if s.ends_with("svg")  { g.set("output_format", "svg")?; }
+            if s.ends_with("tikz") { g.set("output_format", "tikz")?; }
+            if s.ends_with("pdf")  { g.set("output_format", "pdf")?; }
+        }
+        //if let Some(ref f) = &opt.input {
+            g.set("input_file",&*opt.input.to_string_lossy())?;
+        //}
+        //if let Some(ref f) = &opt.output {
+            g.set("output_file",&*opt.output.to_string_lossy())?;
+        //}
+
+
         // Load library stored in lua
         l.load(include_str!("lib.lua")).set_name("railplotlib")?.exec()
-            .with_context(|_| format!("Error loading railplot Lua library!"))?;
+            .context("Error loading railplot Lua library!")?;
 
 
-        let g = l.globals();
         // Rust functions library
         g.set("load_xml", l.create_function(load_xml)?)?;
         g.set("load_railml", l.create_function(load_railml)?)?;
@@ -129,8 +173,8 @@ fn main() -> Result<(),ExitFailure> {
         l.globals().set("to_json_pretty",to_json_pretty)?;
 
 
-        let x = l.load(&script_file_contents)
-            .set_name(&opt.script.to_string_lossy().as_bytes())?.exec()
+        let x = l.load(&script)
+            .set_name(script_name.as_bytes())?.exec()
             .map_err(|e| match e { 
                 rlua::Error::CallbackError { cause , .. } => rlua::Error::CallbackError {
                     traceback: format!("{}",cause), cause: cause,
@@ -159,7 +203,9 @@ fn main() -> Result<(),ExitFailure> {
 /// Here, putting the string "objects" into the arrays table will avoid
 /// creating a associative table where the "object" key points to an array 
 /// of objects, and instead return the array of <object>s directly.
-fn load_xml<'l>(ctx :rlua::Context<'l>, (filename,a):(String,Option<rlua::Table<'l>>)) -> Result<rlua::Value<'l>,rlua::Error>
+fn load_xml<'l>(ctx :rlua::Context<'l>, 
+                (filename,a):(String,Option<rlua::Table<'l>>)) 
+                              -> Result<rlua::Value<'l>,rlua::Error>
 {
     let arrays = if let Some(t) = a {
         t.sequence_values::<String>().collect::<Result<Vec<_>,_>>()?
@@ -232,18 +278,22 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
     };
 
     let root = xml::open_xml(&filename).to_lua_err()?;
-    let ns = root.ns().ok_or("Missing XML namespace.").to_lua_err()?.to_string();
-    let branching :BranchingModel<rlua::Value> = railml::railml_to_branching(&root,&ns,
-                         get_xml_objects,get_xml_pos)
+    let ns = root.ns().ok_or("Missing XML namespace.")
+        .to_lua_err()?.to_string();
+    let branching :BranchingModel<rlua::Value> = 
+        railml::railml_to_branching(&root,&ns,
+                                    get_xml_objects,get_xml_pos)
         .to_lua_err()?;
-    let schematic :SchematicGraph<rlua::Value> = railml::branching_to_schematic_graph(branching)
+    let schematic :SchematicGraph<rlua::Value> = 
+        railml::branching_to_schematic_graph(branching)
         .to_lua_err()?;
     let lua = convert_lua::schematic_graph_to_lua(ctx, schematic)
         .to_lua_err()?;
     Ok(lua)
 }
 
-fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua::Value<'l>,rlua::Error> {
+fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) 
+-> Result<rlua::Value<'l>,rlua::Error> {
     let m = args.get::<_,rlua::Table>("model")
         .map_err(|e| format!("Requires model argument. {}", e)).to_lua_err()?;
     let m = convert_lua::schematic_graph_from_lua(&m)?;
@@ -253,8 +303,8 @@ fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua
     use railplotlib::solvers::SchematicSolver;
     use railplotlib::solvers::Goal;
     let solver = match method.as_str() {
-        "levelssat" => Box::new(railplotlib::solvers::LevelsSatSolver { criteria:
-            vec![Goal::Bends, Goal::Height, Goal::Width],
+        "levelssat" => Box::new(railplotlib::solvers::LevelsSatSolver { 
+            criteria: vec![Goal::Bends, Goal::Height, Goal::Width],
         }), 
         _ => panic!(),
     };
@@ -264,9 +314,15 @@ fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua
     Ok(lua_output)
 }
 
-fn tikzpdf<'l>(_ctx :rlua::Context<'l>, (filename,text,preamble):(String,String,Option<String>)) -> Result<(),rlua::Error> {
+fn tikzpdf<'l>(_ctx :rlua::Context<'l>, 
+               (mut filename,text,preamble):(String,String,Option<String>)) 
+                                         -> Result<(),rlua::Error> {
+    if filename.ends_with(".pdf") {
+        filename = filename.chars().take(filename.len()-4).collect();
+    }
     let mut input = String::new();
-    input.push_str(r#"\documentclass[tikz,margin=5mm]{standalone} \usepackage{pgfplots,amsmath}"#);
+    input.push_str(r#"\documentclass[tikz,margin=5mm]{standalone}
+                   \usepackage{pgfplots,amsmath}"#);
     if let Some(pre) = preamble { input.push_str(&pre); }
     input.push_str(r#"\begin{document} \begin{tikzpicture}"#);
     input.push_str(&text);
@@ -282,7 +338,9 @@ fn tikzpdf<'l>(_ctx :rlua::Context<'l>, (filename,text,preamble):(String,String,
         .spawn().to_lua_err()?;
 
     {
-        let stdin = proc.stdin.as_mut().ok_or(format!("Failed to open pdflatex input pipe.")).to_lua_err()?;
+        let stdin = proc.stdin.as_mut()
+            .ok_or(format!("Failed to open pdflatex input pipe."))
+            .to_lua_err()?;
         use std::io::Write;
         stdin.write_all(input.as_bytes()).to_lua_err()?;
     }

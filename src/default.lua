@@ -1,10 +1,5 @@
-
-print("hei")
-input_file = "../examples/split.railml"
-input_file_format = "railml"
-
-check(input_file ~= nil, "No input file given.")
-check(input_file_format == "railml", "Need RailML file.")
+check(input_file ~= nil, "No input file given")
+check(from_format == "railml", "Unrecognized input file format.")
 
 model = load_railml { 
     filename = input_file,
@@ -30,15 +25,32 @@ output = plot_network {
     model=model,
 }
 
+if output_format == "json" then
+    print(to_json_pretty(output))
 
-tikz = ""
-tikz = tikz .. (tikz_tracks   { data = output, style = "ultra thick, black" })
-tikz = tikz .. (tikz_switches { data = output, style = "" })
-tikz = tikz .. (tikz_symbols  { data = output, draw = function(o) 
-    x0,y0 = -o._symbol_info.origin, 0
-    x1,y1 = o._symbol_info.width, -0.25*o._symbol_info.level
-    return "\\draw ("..x0..","..y0..") rectangle ("..x1..","..y1..");"
-end })
+elseif output_format == "tikz" or output_format == "pdf" then
+    tikz = ""
+    tikz = tikz .. (tikz_tracks   { data = output, style = "ultra thick, black" })
+    tikz = tikz .. (tikz_switches { data = output, style = "" })
+    tikz = tikz .. (tikz_symbols  { data = output, draw = function(o) 
+        x0,y0 = -o._symbol_info.origin, 0
+        x1,y1 = o._symbol_info.width, -0.25*o._symbol_info.level
+        return "\\draw ("..x0..","..y0..") rectangle ("..x1..","..y1..");"
+    end })
 
---print(tikz)
-tikzpdf("schematic",tikz)
+    if output_format == "tikz" then 
+        print(tikz)
+    else 
+        tikzpdf(output_file,tikz)
+    end
+
+
+elseif output_format == "svg" then
+    svg = ""
+    print(svg)
+
+else
+    error "Unknown output format."
+end
+
+
