@@ -30,7 +30,9 @@ matrix:
 
     # Windows
     - env: TARGET=x86_64-pc-windows-msvc
+      os: windows
     - env: TARGET=i686-pc-windows-msvc
+      os: windows
 
 before_install:
   - set -e
