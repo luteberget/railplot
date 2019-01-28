@@ -1,21 +1,22 @@
-**railplot** -- create drawings of railway infrastructure.
+# railplot
 
+Railplot is a library and command line tool for converting
+railway infrastructure data into a visual representation.
+It can read tracks and trackside equipment from railML or
+the railplotinf format and write output to JSON, SVG or TikZ.
+(TODO It can also produce PDF and JPG on systems that have
+converters installed)
 
-### Features:
+## Using railplot
 
-* Import railML 2.x, or use the railplot custom format
-* Choose from three drawing methods: 
-  - Levels-based linear programming (very fast but switches are straight),
-  - Levels-based SAT (fast but does not bend edges), or
-  - Grid-based SAT (less fast, but can create optimal width/height).
-* Choose optimization criteria: width, height, bends, etc.
-* Save output as:
-  - JSON (for use in other applications), 
-  - SVG (image format), or 
-  - TikZ (LateX document format).
+```shell
+railplot -f railml -t svg my_infrastructure.xml
+```
 
-### Examples:
-
-![Comparison of algorithms](.imgs/comparisonfig.png)
-
+## Implementation
+This command line tool uses three (four?) libraries:
+ * railml input conversion to graph / label-loc-size
+ * schematic drawing constraint solver (levellp/levelsat/gridsat)
+ * schematic symbol placement
+ * output format template stuff
 

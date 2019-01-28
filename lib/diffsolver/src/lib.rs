@@ -218,7 +218,20 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
     pub fn get_value(&self, DVar(x) :DVar) -> isize {
         self.distance_map[0] - self.distance_map[x]
     }
+
+//    pub fn optimize(&self, func :Expression) -> Vec<isize> {
+//
+//    }
 }
+
+pub enum Expression {
+    Constant(isize),
+    Variable(DVar),
+    Add(Box<Expression>,Box<Expression>),
+    Mul(Box<Expression>,Box<Expression>),
+}
+
+
 
 // Sat modulo difference logic (on isize ints) solver
 pub struct SATModDiff {
