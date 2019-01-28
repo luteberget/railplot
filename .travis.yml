@@ -40,6 +40,7 @@ before_install:
   - rustup target install $TARGET
 
 install:
+  - bash ci/install.sh
   - source ~/.cargo/env || true
 
 script:
