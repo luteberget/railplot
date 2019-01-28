@@ -1,4 +1,5 @@
 
+print("hei")
 input_file = "../examples/split.railml"
 input_file_format = "railml"
 
