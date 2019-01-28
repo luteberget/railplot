@@ -1,6 +1,8 @@
-use crate::solvers::{polyline_from_lua, point_from_lua};
-use crate::schematic_graph::{Shape, shape_from_string};
+use railplotlib::model::{Shape};
+use crate::convert_lua::{polyline_from_lua, point_from_lua};
+use crate::convert_lua::{shape_from_string};
 use rlua;
+use log::trace;
 
 type Pt = (f64,f64);
 
@@ -100,7 +102,7 @@ pub fn tikz_symbols<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<
         let pt  = point_from_lua(s.get("point")?)?;
         let tan  = point_from_lua(s.get("tangent")?)?;
         let deg = rad2deg(angle(tan));
-        //println!("{:?} {:?}", pt, tan);
+        trace!("TikZ symbols point/tangent {:?} {:?}", pt, tan);
         out.push_str(&format!("\\begin{{scope}}[shift={{{}}},rotate={}]\n", 
              coords(pt.0,pt.1), deg));
         let draw :String = draw_func.call(s)?;

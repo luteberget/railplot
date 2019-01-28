@@ -1,56 +1,6 @@
-/// Data types for representing schematic graph
-/// as strongly-typed Rust, and conversion to/from Lua
-
-#[derive(Debug, Copy, Clone)]
-pub enum Dir { Up, Down }
-
-impl Dir {
-    pub fn opposite(&self) -> Dir {
-        match self {
-            Dir::Up => Dir::Down,
-            Dir::Down => Dir::Up,
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum Side { Left, Right }
-
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown top/bottom */ }
-
-#[derive(Debug, Copy, Clone)]
-#[allow(dead_code)]
-pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
-
-#[derive(Debug )]
-pub struct Node {
-    pub name :String,
-    pub pos :f64,
-    pub shape :Shape,
-}
-
-#[derive(Debug )]
-pub struct Edge<Obj> {
-    pub a :(String,Port),
-    pub b :(String,Port),
-    pub objects :Vec<(Symbol,Obj)>,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct Symbol {
-    pub pos :f64,
-    pub width :f64,
-    pub origin: f64,
-    pub level: isize,
-}
-
-pub struct SchematicGraph<Obj> {
-    pub nodes :Vec<Node>,
-    pub edges :Vec<Edge<Obj>>,
-}
-
+use railplotlib::model::*;
+use railplotlib::solvers::*;
+use log::{info};
 
 fn port_to_string(p :Port) -> &'static str {
     match p {
@@ -172,7 +122,7 @@ pub fn schematic_graph_from_lua<'l>(schematic :&rlua::Table<'l>) -> Result<Schem
         model.edges.push(Edge { a: (node_a, port_a), b: (node_b, port_b), objects });
     }
 
-    println!("converted model");
+    info!("Converted schematic graph to Lua.");
     Ok(model)
 }
 
@@ -191,4 +141,62 @@ pub fn symbol_from_lua(s :&rlua::Table) -> Result<Symbol,String> {
     let origin = s.get::<_,f64>("origin").map_err(|e| format!("Symbol.origin: {}",e))?;
     let level = s.get::<_,isize>("level").map_err(|e| format!("Symbol.level: {}",e))?;
     Ok(Symbol { pos, width, origin, level })
+}
+
+
+pub fn output_to_lua<'l>(ctx :rlua::Context<'l>, model :SchematicOutput<rlua::Value<'l>>) -> Result<rlua::Value<'l>,rlua::Error> {
+
+    // convert nodes
+
+    let node_tbls :Vec<rlua::Table> = model.nodes.into_iter().map(|(n,(x,y))| {
+        let t = node_to_lua(ctx, n)?;
+        t.set("x",x)?;
+        t.set("y",y)?;
+        Ok(t)
+    }).collect::<Result<Vec<_>,_>>()?;
+
+
+    // convert edges
+    let edge_tbls :Vec<rlua::Table> = model.lines.into_iter().map(|(e,ls)| {
+        let t = edge_to_lua(ctx,e)?;
+        t.set("line", polyline_to_lua(ctx, ls)?)?;
+        Ok(t)
+    }).collect::<Result<Vec<_>,_>>()?;
+
+    // convert symbols
+    let symbol_tbls :Vec<rlua::Table> = model.symbols.into_iter().map(|(obj,(pt,tan))| {
+        match obj {
+            rlua::Value::Table(t) => {
+                t.set("point", ctx.create_sequence_from(vec![pt.0,pt.1])?)?;
+                t.set("tangent", ctx.create_sequence_from(vec![tan.0,tan.1])?)?;
+                Ok(t)
+            },
+            _ => panic!("Symbol must be Lua table type."),
+        }
+    }).collect::<Result<Vec<_>,_>>()?;
+
+
+    let lua_model = ctx.create_table()?;
+    lua_model.set("nodes",node_tbls)?;
+    lua_model.set("edges",edge_tbls)?;
+    lua_model.set("symbols",symbol_tbls)?;
+    Ok(rlua::Value::Table(lua_model))
+}
+
+pub fn point_to_lua<'l>(ctx :rlua::Context<'l>, (x,y) :(f64,f64)) -> Result<rlua::Table<'l>, rlua::Error> {
+    ctx.create_sequence_from(vec![x,y])
+}
+
+pub fn point_from_lua(t :rlua::Table) -> Result<(f64,f64), rlua::Error> {
+    let x = t.sequence_values().collect::<Result<Vec<f64>,_>>()?;
+    Ok((x[0],x[1]))
+}
+
+pub fn polyline_to_lua<'l>(ctx :rlua::Context<'l>, ls :Vec<(f64,f64)>) -> Result<rlua::Table<'l>,rlua::Error> {
+    ctx.create_sequence_from(ls.into_iter().map(|pt| point_to_lua(ctx,pt))
+            .collect::<Result<Vec<_>,_>>()?)
+}
+
+pub fn polyline_from_lua<'l>(ls :rlua::Table<'l>) -> Result<Vec<(f64,f64)>,rlua::Error> {
+    ls.sequence_values().map(|pt| point_from_lua(pt?)).collect::<Result<Vec<_>,_>>()
 }

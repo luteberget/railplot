@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
-use super::schematic_graph::*;
+use railplotlib::model::*;
 use ordered_float::OrderedFloat;
+use log::trace;
 
 pub fn branching_to_schematic_graph<Obj>(model :BranchingModel<Obj>) -> Result<SchematicGraph<Obj>, String> {
 
@@ -83,14 +84,14 @@ pub fn branching_to_schematic_graph<Obj>(model :BranchingModel<Obj>) -> Result<S
         };
     }
 
-        println!("e {:?}", named_connections);
+        trace!("Named connections {:?}", named_connections);
     for ((a,b),c) in &ref_edges {
-        println!("e {:?}", (a,b,c.len()));
+        trace!("Ref. edges {:?}", (a,b,c.len()));
     }
 
     model.edges = ref_edges.into_iter().map(|((a,b),objects)| {
-        println!("{:?}", named_connections);
-        println!("{:?} {:?}", a,b);
+        trace!("Named connections {:?}", named_connections);
+        trace!("Removing from n.conn. {:?} {:?}", a,b);
         let begin = a.unwrap_or_else(|(x,y)| named_connections.remove(&(y,x)).unwrap());
         let end =   b.unwrap_or_else(|(x,y)| named_connections.remove(&(y,x)).unwrap());
         Edge { a: begin, b: end, objects }
@@ -186,7 +187,7 @@ pub fn railml_to_branching<'a,O,P,Obj>(doc :&'a minidom::Element, ns: &str,
         let name = track.attr("name").or_else(|| track.attr("id"))
             .ok_or(format!("Track is missing id and name."))?;
 
-        //println!("track {}", name);
+        trace!("Found track \"{}\"", name);
         let track_idx = model.tracks.len();
         let topology = track.get_child("trackTopology", ns)
             .ok_or(format!("No trackTopology element in track {:?}", name))?;

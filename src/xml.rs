@@ -57,7 +57,6 @@ pub fn json_to_lua<'lua>(ctx: rlua::Context<'lua>, x :serde_json::Value) -> Resu
 }
 
 pub fn open_xml(filename :&str) -> Result<minidom::Element, failure::Error> {
-    //println!("ARRAYS {:?}", arrays);
     use std::fs::File;
     //use std::io::Read;
     use std::io::BufReader;

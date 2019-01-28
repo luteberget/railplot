@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, BinaryHeap};
-use crate::schematic_graph::*;
+use crate::model::*;
 use std::hash::Hash;
+use log::{trace};
 
 type NodeRef = usize;
 type EdgeRef = usize;
@@ -9,6 +10,7 @@ type NodePort = (NodeRef, Port);
 type Edge = (NodePort,NodePort);
 
 pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
+    trace!("computing edge order");
     let mut lt :HashSet<EdgePair> = HashSet::new();
 
     // (NodeRef,Port) -> EdgeRef
@@ -98,7 +100,6 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
         match &n.shape {
             Shape::Switch(_side,dir) => {
                 let (l,r) = lr(i,*dir);
-                //println!("adding from {:?} {:?} {:?} {:?}", dir, n,l,r);
                 for e_l in &l {
                     for e_r in &r {
                         lt.insert((*e_r,*e_l));
@@ -113,6 +114,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
 }
 
 pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
+    trace!("Computing transitive reduction");
     let map = {
         let mut map = HashMap::new();
         for (a,b) in set.iter() {

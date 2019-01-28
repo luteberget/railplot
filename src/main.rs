@@ -28,41 +28,21 @@ use rlua::ExternalResult;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-mod schematic_graph;
-mod solvers;
+use log::*;
+
+mod convert_lua;
 mod xml;
 mod railml;
-
-mod levelssat;
-mod edgeorder;
-
 mod tikz_output;
-
-//#[derive(Debug, Copy, Clone)]
-//enum InputFormat { RailML, Custom, Script }
-//
-//#[derive(Debug, Copy, Clone)]
-//enum OutputFormat { JSON, SVG, TikZ }
-//
-//fn parse_output_format(src: &str) -> Result<OutputFormat, String> {
-//    if src == "json" { return Ok(OutputFormat::JSON); }
-//    if src == "svg" { return Ok(OutputFormat::SVG); }
-//    if src == "tikz" { return Ok(OutputFormat::TikZ); }
-//    Err(format!("Unrecognized format: {}", src))
-//}
-//
-//fn parse_input_format(src: &str) -> Result<InputFormat, String> {
-//    if src == "railml" { return Ok(InputFormat::RailML); }
-//    if src == "custom" { return Ok(InputFormat::Custom); }
-//    if src == "script" { return Ok(InputFormat::Script); }
-//    Err(format!("Unrecognized format: {}", src))
-//}
-
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Linear schematic railway drawings")]
 struct Opt {
+    /// Verbose mode (-v, -vv, -vvv, etc.)
+    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
+    verbose: u8,
 
+    //
     // /// Activate debug mode
     // #[structopt(short = "d", long = "debug")]
     // debug: bool,
@@ -95,6 +75,24 @@ struct Opt {
 
 fn main() -> Result<(),ExitFailure> {
     let opt = Opt::from_args();
+
+    // Setup logging, use environment variable if available, otherwise command line switches.
+    if let Ok(ref envvar) = std::env::var("RAILPLOT_LOG") {
+        env_logger::Builder::new()
+            .parse(envvar)
+            .init();
+    } else {
+        env_logger::Builder::new()
+            .filter(None, match opt.verbose {
+                0 => LevelFilter::Error,
+                1 => LevelFilter::Warn,
+                2 => LevelFilter::Info,
+                3 => LevelFilter::Debug,
+                _ => LevelFilter::Trace,
+            }).init();
+    }
+
+
     use std::fs;
     let script_file_contents = fs::read_to_string(&opt.script).expect("Could not read file.");
 
@@ -102,7 +100,7 @@ fn main() -> Result<(),ExitFailure> {
     let lua = Lua::new();
     lua.context::<_,Result<(),failure::Error>>(|l| {
         // Load library stored in lua
-        l.load(include_str!("std.lua")).set_name("railplotlib")?.exec()
+        l.load(include_str!("lib.lua")).set_name("railplotlib")?.exec()
             .with_context(|_| format!("Error loading railplot Lua library!"))?;
 
 
@@ -140,7 +138,6 @@ fn main() -> Result<(),ExitFailure> {
                 _ => e,
             })
             .with_context(|_| format!("Error executing input script."));
-        //println!("X WAS {:?}", x);
         x?;
         Ok(())
      })?;
@@ -187,7 +184,8 @@ fn load_xml<'l>(ctx :rlua::Context<'l>, (filename,a):(String,Option<rlua::Table<
 ///
 fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua::Value<'l>,rlua::Error> {
     use crate::railml::*;
-    use crate::schematic_graph::*;
+    use crate::convert_lua::*;
+    use railplotlib::model::*;
     let a = vec!["signals".to_string(),"trainDetectionElements".to_string()];
 
     let filename = args.get::<_,String>("filename")
@@ -240,7 +238,7 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
         .to_lua_err()?;
     let schematic :SchematicGraph<rlua::Value> = railml::branching_to_schematic_graph(branching)
         .to_lua_err()?;
-    let lua = schematic_graph::schematic_graph_to_lua(ctx, schematic)
+    let lua = convert_lua::schematic_graph_to_lua(ctx, schematic)
         .to_lua_err()?;
     Ok(lua)
 }
@@ -248,21 +246,21 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
 fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua::Value<'l>,rlua::Error> {
     let m = args.get::<_,rlua::Table>("model")
         .map_err(|e| format!("Requires model argument. {}", e)).to_lua_err()?;
-    let m = schematic_graph::schematic_graph_from_lua(&m)?;
+    let m = convert_lua::schematic_graph_from_lua(&m)?;
 
     // choose solver
     let method = args.get::<_,String>("method").unwrap_or("levelssat".to_string());
-    use self::solvers::SchematicSolver;
-    use self::solvers::Goal;
+    use railplotlib::solvers::SchematicSolver;
+    use railplotlib::solvers::Goal;
     let solver = match method.as_str() {
-        "levelssat" => Box::new(solvers::LevelsSatSolver { criteria:
+        "levelssat" => Box::new(railplotlib::solvers::LevelsSatSolver { criteria:
             vec![Goal::Bends, Goal::Height, Goal::Width],
         }), 
         _ => panic!(),
     };
 
     let output = solver.solve(m).to_lua_err()?;
-    let lua_output = solvers::output_to_lua(ctx, output)?;
+    let lua_output = convert_lua::output_to_lua(ctx, output)?;
     Ok(lua_output)
 }
 
@@ -276,9 +274,11 @@ fn tikzpdf<'l>(_ctx :rlua::Context<'l>, (filename,text,preamble):(String,String,
 
     use std::process;
 
+    info!("Starting pdflatex");
     let mut proc = process::Command::new("pdflatex")
         .args(&["-jobname",&filename])
         .stdin(process::Stdio::piped())
+        .stdout(process::Stdio::piped())
         .spawn().to_lua_err()?;
 
     {
@@ -286,6 +286,7 @@ fn tikzpdf<'l>(_ctx :rlua::Context<'l>, (filename,text,preamble):(String,String,
         use std::io::Write;
         stdin.write_all(input.as_bytes()).to_lua_err()?;
     }
-    proc.wait().to_lua_err()?;
+    proc.wait_with_output().to_lua_err()?;
+    info!("Pdflatex finished");
     Ok(())
 }

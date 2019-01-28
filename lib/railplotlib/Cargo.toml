@@ -1,10 +1,11 @@
 [package]
-name = "diffsolver"
+name = "railplotlib"
 version = "0.1.0"
 authors = ["Bjørnar Luteberget <luteberget@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-minisat="0.4"
-time="0.1"
-log="0.4"
+diffsolver = { path = "../diffsolver" }
+disjoint-sets = "0.4"
+ordered-float = "1.0"
+log = "0.4"

@@ -3,6 +3,7 @@ extern crate time;
 use time::{PreciseTime, Duration};
 
 use minisat::{Bool,Lit};
+use log::{debug,  trace};
 
 use std::hash::Hash;
 use std::collections::HashMap;
@@ -83,7 +84,7 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         let idx = edge.constraints.len() -1;
 
         self.constraints.insert(id, (x,y,idx));
-        //println!("Constraints: {:?}", self.constraints);
+        trace!("Constraints: {:?}", self.constraints);
     }
 
     pub fn is_enabled(&self, id :CId) -> &bool {
@@ -93,11 +94,11 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
 
     pub fn disable(&mut self, id :CId) {
         let (x,y,i) = self.constraints[&id];
-        //println!("  (T) test-disabling {:?}", (id,(x,y,i)));
+        trace!("  (T) test-disabling {:?}", (id,(x,y,i)));
         let a = &mut (*self.edges[x].get_mut(&y).unwrap()).constraints[i].active;
         if !*a { return; }
         *a = false;
-        //println!("  (T) disabling {:?}", (id,(x,&self.vars[x],y,&self.vars[y],i)));
+        trace!("  (T) disabling {:?}", (id,(x,&self.vars[x],y,&self.vars[y],i)));
 
         // Update weight from all active
         let mut w = INF;
@@ -111,21 +112,21 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
 
     pub fn enable(&mut self, id :CId) -> Result<(), Unsat<CId>> {
         let (x,y,i) = self.constraints[&id];
-        //println!("  (T) test-enabling {:?}", (id,(x,y,i)));
+        trace!("  (T) test-enabling {:?}", (id,(x,y,i)));
         let a = &mut (*self.edges[x].get_mut(&y).unwrap()).constraints[i].active;
         if *a { return Ok(()); }
         *a = true;
-        //println!("  (T) enabling {:?}", (id,(x,&self.vars[x],y,&self.vars[y],i)));
+        trace!("  (T) enabling {:?}", (id,(x,&self.vars[x],y,&self.vars[y],i)));
 
         let old_w = self.edges[x][&y].weight;
         let w = self.edges[x][&y].constraints[i].weight;
         if w < self.edges[x][&y].weight {
-            //println!("  (T) enabling updated weight: {}->{}", 
-                     //&self.edges[x][&y].weight, w);
+            trace!("  (T) enabling updated weight: {}->{}", 
+                     &self.edges[x][&y].weight, w);
             (*self.edges[x].get_mut(&y).unwrap()).weight = w;
         } else {
-            //println!("  (T) enabling did not update w: {}->{}", 
-                     //&self.edges[x][&y].weight, w);
+            trace!("  (T) enabling did not update w: {}->{}", 
+                     &self.edges[x][&y].weight, w);
             (*self.edges[x].get_mut(&y).unwrap()).constraints[i].active = true;
             return Ok(());
         }
@@ -141,11 +142,11 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
 
                 // Backtrack through constraints graph finding a negative cycle
                 let mut unsat = vec![];
-                //println!("  (T) Backtracking through parent list {:?}", parents);
+                trace!("  (T) Backtracking through parent list {:?}", parents);
                 let (mut a, mut b) = (x,y);
                 loop {
                     let (mut w, mut i) = (INF, None);
-                    //println!("  (T) backtrack {:?}", &self.edges[a][&b].constraints); 
+                    trace!("  (T) backtrack {:?}", &self.edges[a][&b].constraints); 
                     for &Constraint { active, weight, id } in &self.edges[a][&b].constraints {
                         if active && weight < w {
                             w = weight;
@@ -153,16 +154,16 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
                         }
                     }
 
-                    //println!("  (T) backtracking {} {} {:?} {:?} {} {}", a,b,&self.vars[a], &self.vars[b],x,y);
+                    trace!("  (T) backtracking {} {} {:?} {:?} {} {}", a,b,&self.vars[a], &self.vars[b],x,y);
                     if let Some(c) = i.expect(&format!("did not find constraint for {} {}",a,b)) {
                         unsat.push(c);
-                        //println!("  (T) backtracking c{:?}", c);
+                        trace!("  (T) backtracking c{:?}", c);
                     }
                     b = a;
                         a = parents[a].unwrap();
                         if (a,b) == (x,y) { break; }
                 }
-                //println!("  (T) unsat: {:?}", unsat);
+                trace!("  (T) unsat: {:?}", unsat);
 
                 // Revert the update of the weight matrix
                 (*self.edges[x].get_mut(&y).unwrap()).weight = old_w;
@@ -178,33 +179,33 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
     }
 
     fn detect_cycle(&self, u:usize, v:usize) -> Result<Vec<isize>, Vec<Option<usize>>> {
-        //println!("  (T) detect_cycle({},{})", u,v);
+        trace!("  (T) detect_cycle({},{})", u,v);
         if !(self.distance_map[v] > self.distance_map[u] + self.get_weight(u,v)) {
-            //println!("  (T) detect_cycle: no update");
+            trace!("  (T) detect_cycle: no update");
             return Ok(self.distance_map.clone());
         }
-        //println!("  (T) detect_cycle: update!");
+        trace!("  (T) detect_cycle: update!");
 
         let mut d = self.distance_map.clone();
         let mut p = vec![None; self.distance_map.len()];
         let mut queue = VecDeque::new();
         d[v] = d[u] + self.get_weight(u,v);
         p[v] = Some(u);
-        //println!("  (T) detect_cycle: going from {}", v);
+        trace!("  (T) detect_cycle: going from {}", v);
         queue.push_back(v);
 
         while let Some(x) = queue.pop_front() {
-            //println!("  (T) detect_cycle: pop {}", x);
+            trace!("  (T) detect_cycle: pop {}", x);
             // TODO slight optimization to have a separate adjacency list
             //   for only nodes to which there are active edges?
             for (&y, &Edges { weight, .. }) in &self.edges[x] {
-                //println!("  (T) detect_cycle: check {}->{} ({})", x,y,weight);
+                trace!("  (T) detect_cycle: check {}->{} ({})", x,y,weight);
                 if d[y] > d[x] + weight {
                     if x == u && y == v {
                         return Err(p);
                     } else {
                         d[y] = d[x] + weight;
-                        //println!("updating {} {} -> {}", x,y, d[y]);
+                        trace!("updating {} {} -> {}", x,y, d[y]);
                         p[y] = Some(x);
                         queue.push_back(y);
                     }
@@ -292,7 +293,7 @@ impl SATModDiff {
 
     fn make_consistent(&mut self, prefix :&[Bool]) -> bool {
         loop {
-            //println!("(*) solving sat");
+            debug!("(*) solving sat");
 
             let t1 = PreciseTime::now();
             let m  =self.sat.solve_under_assumptions(prefix.iter().cloned());
@@ -302,7 +303,7 @@ impl SATModDiff {
             match m {
                 Err(()) => return false,
                 Ok(model) => {
-                    //println!("(*) sat ok, going to theory");
+                    debug!("(*) sat ok, going to theory");
 
                     let t1 = PreciseTime::now();
                     let t = Self::theory_consistent(&model, &mut self.diff);
@@ -311,11 +312,11 @@ impl SATModDiff {
 
                     match t {
                         Ok(()) => {
-                            //println!("(*) theory ok");
+                            debug!("(*) theory ok");
                             return true;
                         },
                         Err(unsat) => {
-                            println!("(*) unsat theory, removing {}", unsat.len());
+                            debug!("(*) unsat theory, removing {}", unsat.len());
                             self.sat_clauses_generated += 1;
                             self.sat.add_clause(unsat.into_iter().map(|x| Bool::Lit(!x)));
                         },
@@ -344,9 +345,8 @@ pub struct SATDiffModel<'a> {
     pub diff :&'a Differences<Lit>,
 }
 
-fn main() {
-    test1();
-
+#[test]
+fn test1() {
     let mut s = SATModDiff::new();
     let x = s.diff.new_var();
     let y = s.diff.new_var();
@@ -368,7 +368,8 @@ fn main() {
     }
 }
 
-fn test1() {
+#[test]
+fn test2() {
     let mut d = Differences::new();
     let x = d.new_var();
     let y = d.new_var();

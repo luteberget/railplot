@@ -14,6 +14,9 @@ serde_json ="*"
 minidom = "*"
 quick-xml="*"
 ordered-float="*"
-diffsolver = {path = "../diffsolver"}
-disjoint-sets="*"
+diffsolver = {path = "lib/diffsolver"}
+railplotlib = {path = "lib/railplotlib"}
 itertools = "*"
+
+log = "0.4"
+env_logger = "0.6"
