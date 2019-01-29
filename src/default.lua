@@ -19,7 +19,6 @@ if input_format == "railml" then
                 extend(objs,track.ocsElements.trainDetectionElements)
                 extend(objs,track.ocsElements.balises)
             end
-            log_warn(tostring(dump(objs)))
             return objs
         end,
 
