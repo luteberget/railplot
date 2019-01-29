@@ -26,6 +26,10 @@ main() {
     # TODO Update this to package the right artifacts
     cp target/$TARGET/release/railplot $stage/
 
+    for f in examples/bundled/*railml; do 
+        cp $f $stage/example-$(basename -- "$f").xml
+    done
+
     cd $stage
     case $TRAVIS_OS_NAME in
         linux)

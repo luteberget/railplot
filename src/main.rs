@@ -34,6 +34,7 @@ mod convert_lua;
 mod xml;
 mod railml;
 mod tikz_output;
+mod svg_output;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Linear schematic railway drawings.\nSee manual at https://github.com/luteberget/railplot/.")]
@@ -44,19 +45,19 @@ struct Opt {
 
     /// Input file
     #[structopt(parse(from_os_str))]
-    input :PathBuf,
+    input :Option<PathBuf>,
 
     /// Output file
     #[structopt(parse(from_os_str))]
-    output :PathBuf,
+    output :Option<PathBuf>,
 
     /// Input format: railml or sgraph
     #[structopt(short="f", long="from")]
-    from_format :Option<String>,
+    input_format :Option<String>,
 
     /// Output format: json, svg, tikz, or pdf
     #[structopt(short="t", long="to")]
-    to_format :Option<String>,
+    output_format :Option<String>,
 
     /// Use a custom script file instead of the default
     #[structopt(short="s", long="script")]
@@ -69,13 +70,20 @@ struct Opt {
     /// Title to be written on the output graphic.
     #[structopt(short="h",long="title")]
     title :Option<String>,
+
+    /// Symbol style: simple or ertms
+    #[structopt(short="c",long="style")]
+    style :Option<String>,
 }
 
 fn main() -> Result<(),ExitFailure> {
     use std::fs;
     use rlua::prelude::*;
 
-    let opt = Opt::from_args();
+    //let opt = Opt::from_args();
+    let clap = Opt::clap();
+    let clap_matches = clap.get_matches();
+    let opt = Opt::from_clap(&clap_matches);
 
     // Setup logging, use environment variable if available, otherwise command line switches.
     if let Ok(ref envvar) = std::env::var("RAILPLOT_LOG") {
@@ -85,10 +93,10 @@ fn main() -> Result<(),ExitFailure> {
     } else {
         env_logger::Builder::new()
             .filter(None, match opt.verbose {
-                0 => LevelFilter::Error,
-                1 => LevelFilter::Warn,
-                2 => LevelFilter::Info,
-                3 => LevelFilter::Debug,
+                //0 => LevelFilter::Error,
+                0 => LevelFilter::Warn,
+                1 => LevelFilter::Info,
+                2 => LevelFilter::Debug,
                 _ => LevelFilter::Trace,
             }).init();
     }
@@ -117,31 +125,35 @@ fn main() -> Result<(),ExitFailure> {
         if let Some(ref t) = &opt.title {
             g.set("title",t.as_str())?;
         }
-        if let Some(ref f) = &opt.from_format {
-            g.set("from_format",f.as_str())?;
-        } else {
-            let s = opt.input.to_string_lossy();
+        if let Some(ref t) = &opt.style {
+            g.set("style",t.as_str())?;
+        }
+        if let Some(ref f) = &opt.input_format {
+            g.set("input_format",f.as_str())?;
+        } else if let Some(ref filename) = &opt.input {
+            let s = filename.to_string_lossy();
             if s.ends_with("railml") || s.ends_with("xml") {
-                g.set("from_format", "railml")?;
+                g.set("input_format", "railml")?;
             } else if s.ends_with("sgraph") {
-                g.set("from_format", "sgraph")?;
+                g.set("input_format", "sgraph")?;
             }
         }
-        if let Some(ref f) = &opt.to_format {
-            g.set("to_format",f.as_str())?;
-        } else {
-            let s = opt.output.to_string_lossy();
+        if let Some(ref f) = &opt.output_format {
+            g.set("output_format",f.as_str())?;
+        } else if let Some(ref filename) = &opt.output {
+            let s = filename.to_string_lossy();
             if s.ends_with("json") { g.set("output_format", "json")?; }
             if s.ends_with("svg")  { g.set("output_format", "svg")?; }
             if s.ends_with("tikz") { g.set("output_format", "tikz")?; }
             if s.ends_with("pdf")  { g.set("output_format", "pdf")?; }
+            if s.ends_with("png")  { g.set("output_format", "png")?; }
         }
-        //if let Some(ref f) = &opt.input {
-            g.set("input_file",&*opt.input.to_string_lossy())?;
-        //}
-        //if let Some(ref f) = &opt.output {
-            g.set("output_file",&*opt.output.to_string_lossy())?;
-        //}
+        if let Some(ref f) = &opt.input {
+            g.set("input_file",&*f.to_string_lossy())?;
+        }
+        if let Some(ref f) = &opt.output {
+            g.set("output_file",&*f.to_string_lossy())?;
+        }
 
 
         // Load library stored in lua
@@ -160,6 +172,33 @@ fn main() -> Result<(),ExitFailure> {
 
         g.set("tikzpdf", l.create_function(tikzpdf)?)?;
 
+        g.set("svg_tracks", l.create_function(svg_output::svg_tracks)?)?;
+        g.set("svg_switches", l.create_function(svg_output::svg_switches)?)?;
+        g.set("svg_symbols", l.create_function(svg_output::svg_symbols)?)?;
+        g.set("drawing_size", l.create_function(svg_output::drawing_size)?)?;
+        g.set("svg_document", l.create_function(svg_output::svg_document)?)?;
+
+        g.set("rsvgpng", l.create_function(rsvgpng)?)?;
+
+        g.set("log_error", l.create_function(|_ctx, s:String| { 
+            error!("{}", s);  Ok(())} )?)?;
+        g.set("log_warn", l.create_function(|_ctx, s:String| { 
+            warn!("{}", s);  Ok(())} )?)?;
+        g.set("log_info", l.create_function(|_ctx, s:String| { 
+            info!("{}", s);  Ok(())} )?)?;
+        g.set("log_debug", l.create_function(|_ctx, s:String| { 
+            debug!("{}", s);  Ok(())} )?)?;
+        g.set("log_trace", l.create_function(|_ctx, s:String| { 
+            trace!("{}", s);  Ok(())} )?)?;
+        g.set("print_help", l.create_function(|_ctx, msg:String| { 
+            // Print clap help.
+            println!("Error: {}", msg);
+            // This exits the program showing the help screen.
+            Opt::clap().get_matches_from(vec!["railplot", "--help"]);
+        Ok(())} )?)?;
+
+        g.set("write", l.create_function(lua_write_file)?)?;
+
         use crate::xml::lua_to_json;
         let to_json = l.create_function(|ctx, obj :rlua::Value| {
             let json = lua_to_json(ctx,obj).to_lua_err()?;
@@ -171,6 +210,7 @@ fn main() -> Result<(),ExitFailure> {
             Ok(serde_json::to_string_pretty(&json).to_lua_err()?)
         })?;
         l.globals().set("to_json_pretty",to_json_pretty)?;
+
 
 
         let x = l.load(&script)
@@ -292,6 +332,18 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
     Ok(lua)
 }
 
+fn lua_write_file<'l>(_c :rlua::Context<'l>, (filename,text):(Option<String>,String))
+-> Result<(),rlua::Error> {
+    if let Some(f) = filename {
+        if f != "-" {
+            std::fs::write(f, text).to_lua_err()?;
+            return Ok(())
+        }
+    }
+    println!("{}", text);
+    Ok(())
+}
+
 fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) 
 -> Result<rlua::Value<'l>,rlua::Error> {
     let m = args.get::<_,rlua::Table>("model")
@@ -346,5 +398,38 @@ fn tikzpdf<'l>(_ctx :rlua::Context<'l>,
     }
     proc.wait_with_output().to_lua_err()?;
     info!("Pdflatex finished");
+    Ok(())
+}
+
+fn rsvgpng<'l>(_ctx :rlua::Context<'l>, 
+               (filename,text,args):(String,String,Option<rlua::Table<'l>>)) 
+                                         -> Result<(),rlua::Error> {
+    let mut input = String::new();
+    input.push_str(&text);
+
+    use std::process;
+    let mut cliargs = vec!["-f", "png", "-o", &filename];
+    let bg_color = args.and_then(|x| x.get::<_,String>("background_color").ok());
+    if let Some(ref c) = bg_color {
+        cliargs.push("-b");
+        cliargs.push(c);
+    }
+
+    info!("Starting rsvg-convert");
+    let mut proc = process::Command::new("rsvg-convert")
+        .args(&cliargs)
+        .stdin(process::Stdio::piped())
+        .stdout(process::Stdio::piped())
+        .spawn().to_lua_err()?;
+
+    {
+        let stdin = proc.stdin.as_mut()
+            .ok_or(format!("Failed to open pdflatex input pipe."))
+            .to_lua_err()?;
+        use std::io::Write;
+        stdin.write_all(input.as_bytes()).to_lua_err()?;
+    }
+    proc.wait_with_output().to_lua_err()?;
+    info!("rsvg-convert finished");
     Ok(())
 }

@@ -1,5 +1,13 @@
-function check(x, msg)
-    if x then return {} else error(msg) end
+function check_warn(x,msg) if x then return {} else log_warn(msg) end end
+function check_info(x,msg) if x then return {} else log_info(msg) end end
+function check_debug(x,msg) if x then return {} else log_debug(msg) end end
+function check_trace(x,msg) if x then return {} else log_trace(msg) end end
+
+args_ok = true
+
+function check_args(x, msg)
+    if x then return true 
+    else print_help(msg) args_ok = false return false end
 end
 
 function dump(o)
@@ -30,4 +38,5 @@ function extend(a,b)
     end
     return a
 end
+
 
