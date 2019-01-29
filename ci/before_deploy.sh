@@ -20,15 +20,20 @@ main() {
 
     test -f Cargo.lock || cargo generate-lockfile
 
-    # TODO Update this to build the artifacts that matter to you
+    # Build binary
     cargo rustc --bin railplot --target $TARGET --release -- -C lto
 
-    # TODO Update this to package the right artifacts
+    # Copy binary
     cp target/$TARGET/release/railplot $stage/
 
+    # Copy examples
     for f in examples/bundled/*railml; do 
         cp $f $stage/example-$(basename -- "$f").xml
     done
+
+    # Copy txt files
+    cp LICENSE $stage/LICENSE.txt
+    cp README.md $stage/README.txt
 
     cd $stage
     case $TRAVIS_OS_NAME in
