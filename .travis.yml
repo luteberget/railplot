@@ -29,9 +29,9 @@ matrix:
       os: osx
 
     # Windows
-    - env: TARGET=i686-pc-windows-msvc BINNAME=windows-x64
+    - env: TARGET=i686-pc-windows-msvc BINNAME=windows-x86
       os: windows
-    - env: TARGET=x86_64-pc-windows-msvc BINNAME=windows-x86
+    - env: TARGET=x86_64-pc-windows-msvc BINNAME=windows-x64
       os: windows
 
 before_install:
