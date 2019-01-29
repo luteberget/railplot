@@ -9,6 +9,7 @@ if input_format == "railml" then
     model = load_railml { 
         -- Load a railml file.
         filename = input_file,
+        arrays = { "signals","trainDetectionElements","balises" },
 
         -- Extract objects from each track.
         track_objects = function(track)
@@ -16,8 +17,9 @@ if input_format == "railml" then
             if track.ocsElements ~= nil then
                 extend(objs,track.ocsElements.signals)
                 extend(objs,track.ocsElements.trainDetectionElements)
-                extend(objs,track.ocsElements.balise)
+                extend(objs,track.ocsElements.balises)
             end
+            log_warn(tostring(dump(objs)))
             return objs
         end,
 
@@ -31,8 +33,20 @@ if input_format == "railml" then
 
         -- Get the symbol info, i.e. level, width, origin and linear position.
         symbol_info = function(o) 
-            level = o.dir == "up" and -1 or 1
-            return { pos = o.absPos or o.pos, width=0.4, origin = 0.0,level=level }
+            if o._elem == "signal" then
+                level = o.dir == "up" and -1 or 1
+                origin = o.dir == "up" and 0.0 or 0.4
+                return { pos = o.absPos or o.pos, 
+                width=0.4, origin = origin, level = level }
+            elseif o._elem == "balise" then
+                return { pos = o.absPos or o.pos, 
+                width=0.15, origin = 0.15/2.0, level = 0 }
+            elseif o._elem == "trainDetector" then
+                return { pos = o.absPos or o.pos, 
+                width=0.05, origin = 0.025, level = 0 }
+            else
+            log_warn("No symbol sizing support for element type " .. tostring(o._elem))
+            end
         end,
     }
 
@@ -59,13 +73,58 @@ elseif output_format == "tikz" or output_format == "pdf" then
     -- translate and rotate the symbols in place. The draw argument
     -- to the tikz_symbols function is called for each symbol, and should
     -- return a string, which is placed into the TikZ output verbatim.
+
+    function rect(x0,y0,x1,y1)
+        return "\\draw ("..x0..","..y0..") rectangle ("..x1..","..y1..");"
+    end
+    function line(x0,y0,x1,y1)
+        return "\\draw ("..x0..","..y0..") -- ("..x1..","..y1..");"
+    end
+    function circle(x,y,r)
+        return "\\draw ("..x..","..y..") circle ("..r..");"
+    end
+
     tikz = ""
-    tikz = tikz .. (tikz_tracks   { data = output, style = "ultra thick, black" })
+    tikz = tikz .. (tikz_tracks   { data = output, style = "thick, black" })
     tikz = tikz .. (tikz_switches { data = output, style = "" })
     tikz = tikz .. (tikz_symbols  { data = output, draw = function(o) 
-        x0,y0 = -o._symbol_info.origin, 0
-        x1,y1 = o._symbol_info.width, -0.25*o._symbol_info.level
-        return "\\draw ("..x0..","..y0..") rectangle ("..x1..","..y1..");"
+        if o._elem == "signal" then
+            a = "" 
+            xl = -o._symbol_info.origin
+            xr = xl + o._symbol_info.width
+            ytop    = 0.125
+            ybottom = -0.125
+
+            --a = a.. rect(xl,ybottom,xr,ytop)
+
+            if o.dir == "up" then
+                a = a.. line(0,0.05,0,-0.05)
+                a = a.. line(0,0,0.1,0)
+                a = a.. circle(0.15,0,0.05)
+            else 
+                a = a.. line(xr-0,0.05,  xr-0,-0.05)
+                a = a.. line(xr-0,0,     xr-0.1,0)
+                a = a.. circle(xr-0.15,0,0.05)
+            end
+
+            return a
+        elseif o._elem == "trainDetector" then
+            return line(0,-0.05,0,0.05)
+        elseif o._elem == "balise" then
+            a = ""
+            s = 0.06
+            x0,y0 = 0.0*s,1.0*s
+            x1,y1 = -0.866*s, -0.5*s
+            x2,y2 = 0.866*s, -0.5*s
+            function coord(x,y) return "(" .. tostring(x) .. "," .. tostring(y) .. ")" end
+            a = a.. "\\path[fill=black] "..coord(x0,y0) 
+                               .. " -- " .. coord(x1,y1)
+                               .. " -- " .. coord(x2,y2) .. ";"
+            return a
+        else
+            log_warn("No symbol support for element type " .. tostring(o._elem))
+            return ""
+        end
     end })
 
     if output_format == "tikz" then 

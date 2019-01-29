@@ -114,7 +114,12 @@ fn convert_symbol_coords(symbols :&[(usize,&Symbol)], symbol_xs :&[f64], edge_li
     fn line_tangent_at_x(l :&[Pt], x :f64) -> Result<Pt,()> {
         trace!("finding line tangent {:?} {:?}", l, x);
         l.binary_search_by_key(&OrderedFloat(x), |(x0,_y0)| OrderedFloat(*x0))
-            .map(|i| (l[i+1].0 - l[i].0, l[i+1].1 - l[i].1)).or_else(|i| {
+            .map(|i| if i+1 < l.len() {
+                (l[i+1].0 - l[i].0, l[i+1].1 - l[i].1)
+            } else {
+                (l[i].0 - l[i-1].0, l[i].1 - l[i-1].1)
+            }
+             ).or_else(|i| {
                 if i == 0 || i == l.len() { Err(()) }
                 else {
                     let (dx,dy) = (l[i].0-l[i-1].0, l[i].1-l[i-1].1);
@@ -130,7 +135,7 @@ fn convert_symbol_coords(symbols :&[(usize,&Symbol)], symbol_xs :&[f64], edge_li
     for (i,(ei,s)) in symbols.iter().enumerate() {
         let line_pt = line_pt_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap();
         let line_tangent  = normalize(line_tangent_at_x(&edge_lines[*ei], symbol_xs[i] as f64).unwrap());
-        let pt = addpt(line_pt, scale(0.25*(s.level as f64),rot90(line_tangent)));
+        let pt = addpt(line_pt, scale(0.25*(s.level as f64-0.5*(s.level.signum() as f64)),rot90(line_tangent)));
 
         trace!("SYMBOL {:?} {:?}", pt, line_tangent);
         output.push((pt,line_tangent));

@@ -272,7 +272,15 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
     use crate::railml::*;
     use crate::convert_lua::*;
     use railplotlib::model::*;
-    let a = vec!["signals".to_string(),"trainDetectionElements".to_string()];
+    let a = vec![
+        "signals".to_string(),
+        "trainDetectionElements".to_string(), 
+        "balises".to_string(),
+    ];
+    let arrays = args.get::<_,rlua::Table>("arrays")
+        .and_then(|a| a.sequence_values().map(|x| { let x:String = x?; Ok(x) })
+                  .collect::<Result<Vec<String>,_>>())
+        .unwrap_or(a);
 
     let filename = args.get::<_,String>("filename")
         .map_err(|e| format!("Requires filename argument. {}",e)).to_lua_err()?;
@@ -288,7 +296,7 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
 
     let get_xml_pos = |e :&minidom::Element| {
         let v = xml::json_to_lua(ctx, 
-                     xml::xml_to_json(e, &a).map_err(|e| format!("{}",e))?
+                     xml::xml_to_json(e, &arrays).map_err(|e| format!("{}",e))?
                  ).map_err(|e| format!("{}",e))?;
         let result = get_pos.call::<_,f64>(v).map_err(|e| format!("{}",e))?;
         Ok(result)
@@ -297,7 +305,7 @@ fn load_railml<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua:
     let get_xml_objects = |e :&minidom::Element| {
         // Convert element to json
         let v = xml::json_to_lua(ctx, 
-                     xml::xml_to_json(e, &a).map_err(|e| format!("{}",e))?
+                     xml::xml_to_json(e, &arrays).map_err(|e| format!("{}",e))?
                  ).map_err(|e| format!("{}",e))?;
         // Run track_objects function on it
         let result = track_objects.call::<_,rlua::Table>(v)
