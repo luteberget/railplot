@@ -19,19 +19,19 @@ matrix:
   # don't need
   include:
     # Linux
-    - env: TARGET=i686-unknown-linux-gnu
-    - env: TARGET=x86_64-unknown-linux-gnu
+    - env: TARGET=i686-unknown-linux-gnu BINNAME=linux-x86
+    - env: TARGET=x86_64-unknown-linux-gnu BINNAME=linux-x64
 
     # OSX
-    - env: TARGET=i686-apple-darwin
+    - env: TARGET=i686-apple-darwin BINNAME=osx-x86
       os: osx
-    - env: TARGET=x86_64-apple-darwin
+    - env: TARGET=x86_64-apple-darwin BINNAME=osx-x64
       os: osx
 
     # Windows
-    - env: TARGET=x86_64-pc-windows-msvc
+    - env: TARGET=i686-pc-windows-msvc BINNAME=windows-x64
       os: windows
-    - env: TARGET=i686-pc-windows-msvc
+    - env: TARGET=x86_64-pc-windows-msvc BINNAME=windows-x86
       os: windows
 
 before_install:

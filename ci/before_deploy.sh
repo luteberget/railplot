@@ -27,7 +27,17 @@ main() {
     cp target/$TARGET/release/railplot $stage/
 
     cd $stage
-    tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$TARGET.tar.gz *
+    case $TRAVIS_OS_NAME in
+        linux)
+            tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$BINNAME.tar.gz *
+            ;;
+        osx)
+            tar czf $src/$CRATE_NAME-$TRAVIS_TAG-$BINNAME.tar.gz *
+            ;;
+        windows)
+            7z a $src/$CRATE_NAME-$TRAVIS_TAG-$BINNAME.zip *
+            ;;
+    esac
     cd $src
 
     rm -rf $stage
