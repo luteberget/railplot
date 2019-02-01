@@ -1,3 +1,4 @@
+use ordered_float::OrderedFloat;
 use railplotlib::model::{Shape};
 use crate::convert_lua::{polyline_from_lua, point_from_lua};
 use crate::convert_lua::{shape_from_string};
@@ -72,6 +73,9 @@ pub fn svg_tracks<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rl
     let mut out = String::new();
     let model = args.get::<_,rlua::Table>("data")?;
     let style :String = args.get("style").unwrap_or_else(|_| format!(""));
+    let title :Option<String> = args.get("title")?;
+    let (mut xmax, mut ymax) = (OrderedFloat(0.0f64),OrderedFloat(0.0f64));
+
     let edges = model.get::<_,rlua::Table>("edges")?;
     for e in edges.sequence_values() {
         let t :rlua::Table = e?;
@@ -81,12 +85,23 @@ pub fn svg_tracks<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rl
         let mut path = String::new();
         let (x,y) = line.remove(0);
         path.push_str(&format!("M {} {}", cx(x),cy(y)));
-        for (x,y) in line {
-            path.push_str(&format!("L {} {}", cx(x),cy(y)));
+        for (x,y) in &line {
+            path.push_str(&format!("L {} {}", cx(*x),cy(*y)));
         }
         out.push_str(&format!("<path {} d=\"{}\" />\n", style, path));
 
+        xmax = xmax.max(line.iter().map(|(x,_)| OrderedFloat(*x)).max().unwrap_or(0.0.into()));
+        ymax = ymax.max(line.iter().map(|(_,y)| OrderedFloat(*y)).max().unwrap_or(0.0.into()));
+
     }
+
+    if let Some(t) = title {
+        //out.push_str(&format!("\\node[align=center,anchor=south] at ({},{}) {{{}}};",
+        out.push_str(&format!("<text x=\"{}\" y=\"{}\" text-anchor=\"middle\">{}</text>\n",
+        cx(xmax.into_inner()/2.0),cy(ymax.into_inner()+0.5),t));
+    }
+
+
     Ok(rlua::Value::String(ctx.create_string(&out)?))
 }
 

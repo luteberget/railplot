@@ -1,3 +1,4 @@
+use ordered_float::OrderedFloat;
 use railplotlib::model::{Shape};
 use crate::convert_lua::{polyline_from_lua, point_from_lua};
 use crate::convert_lua::{shape_from_string};
@@ -19,7 +20,9 @@ pub fn tikz_tracks<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<r
     let mut out = String::new();
     let model = args.get::<_,rlua::Table>("data")?;
     let style :String = args.get("style").unwrap_or_else(|_| format!(""));
+    let title :Option<String> = args.get("title")?;
     let edges = model.get::<_,rlua::Table>("edges")?;
+    let (mut xmax, mut ymax) = (OrderedFloat(0.0f64),OrderedFloat(0.0f64));
     for e in edges.sequence_values() {
         let t :rlua::Table = e?;
         let line :rlua::Table = t.get("line")?;
@@ -27,7 +30,16 @@ pub fn tikz_tracks<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<r
         out.push_str(&format!("\\draw[{}] {};\n", style,
                   line.iter().map(|(x,y)| coords(*x,*y)).join(" -- ")));
 
+        xmax = xmax.max(line.iter().map(|(x,_)| OrderedFloat(*x)).max().unwrap_or(0.0.into()));
+        ymax = ymax.max(line.iter().map(|(_,y)| OrderedFloat(*y)).max().unwrap_or(0.0.into()));
+
     }
+
+    if let Some(t) = title {
+        out.push_str(&format!("\\node[align=center,anchor=south] at ({},{}) {{{}}};",
+        xmax.into_inner()/2.0,ymax.into_inner()+0.5,t));
+    }
+
     Ok(rlua::Value::String(ctx.create_string(&out)?))
 }
 
