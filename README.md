@@ -9,7 +9,7 @@ and write results as a graphics file or as JSON data.
 
 Binary packages for Windows, Linux, and OS X can be downloaded
 from the [releases page](https://github.com/luteberget/railplot/releases/latest).
-Unpack the 
+After unpacking the archive, you should be able to plot the example input files, for example:
 
 ```shell
 > railplot example-twotrack.railml.xml twotrack-output.svg --title "railplot example"
