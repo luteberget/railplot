@@ -1,0 +1,59 @@
+<svg width="700" height="300" 
+              viewBox="-100 -100 700 300" 
+              xmlns="http://www.w3.org/2000/svg">
+<path fill="none" stroke="black" stroke-width="3" d="M 0 100L 100 100" />
+<path fill="none" stroke="black" stroke-width="3" d="M 100 100L 400 100" />
+<path fill="none" stroke="black" stroke-width="3" d="M 100 100L 200 0L 300 0L 400 100" />
+<path fill="none" stroke="black" stroke-width="3" d="M 400 100L 500 100" />
+<text x="250" y="-50" text-anchor="middle">railplot example</text>
+<path fill="black" d="M 100 100L 125 75L 125 100" />
+<path fill="black" d="M 400 100L 375 100L 375 75" />
+<g transform="translate(20 112.5) rotate(0) scale(100 -100)">
+<line x1="0" y1="0.05" x2="0" y2="-0.05" stroke="black" stroke-width="0.02"/><line x1="0" y1="0" x2="0.1" y2="0" stroke="black" stroke-width="0.02"/><circle cx="0.15" cy="0" r="0.05" stroke="black" fill="none" stroke-width="0.02"/>
+</g>
+<g transform="translate(20 100) rotate(0) scale(100 -100)">
+<line x1="0" y1="-0.05" x2="0" y2="0.05" stroke="black" stroke-width="0.02"/>
+</g>
+<g transform="translate(165 87.5) rotate(0) scale(100 -100)">
+<line x1="0.0" y1="0.05" x2="0.0" y2="-0.05" stroke="black" stroke-width="0.02"/><line x1="0.0" y1="0" x2="-0.1" y2="0" stroke="black" stroke-width="0.02"/><circle cx="-0.15" cy="0" r="0.05" stroke="black" fill="none" stroke-width="0.02"/>
+</g>
+<g transform="translate(165 100) rotate(0) scale(100 -100)">
+<line x1="0" y1="-0.05" x2="0" y2="0.05" stroke="black" stroke-width="0.02"/>
+</g>
+<g transform="translate(335 112.5) rotate(0) scale(100 -100)">
+<line x1="0" y1="0.05" x2="0" y2="-0.05" stroke="black" stroke-width="0.02"/><line x1="0" y1="0" x2="0.1" y2="0" stroke="black" stroke-width="0.02"/><circle cx="0.15" cy="0" r="0.05" stroke="black" fill="none" stroke-width="0.02"/>
+</g>
+<g transform="translate(335 100) rotate(0) scale(100 -100)">
+<line x1="0" y1="-0.05" x2="0" y2="0.05" stroke="black" stroke-width="0.02"/>
+</g>
+<g transform="translate(156.16116523516814 26.16116523516816) rotate(-45) scale(100 -100)">
+<line x1="0.0" y1="0.05" x2="0.0" y2="-0.05" stroke="black" stroke-width="0.02"/><line x1="0.0" y1="0" x2="-0.1" y2="0" stroke="black" stroke-width="0.02"/><circle cx="-0.15" cy="0" r="0.05" stroke="black" fill="none" stroke-width="0.02"/>
+</g>
+<g transform="translate(165 35.00000000000001) rotate(-45) scale(100 -100)">
+<line x1="0" y1="-0.05" x2="0" y2="0.05" stroke="black" stroke-width="0.02"/>
+</g>
+<g transform="translate(175 25) rotate(-45) scale(100 -100)">
+<path d="M0.0 0.06L-0.05196 -0.03L0.05196 -0.03" fill="black" stroke="none" />
+</g>
+<g transform="translate(190 10.000000000000009) rotate(-45) scale(100 -100)">
+<path d="M0.0 0.06L-0.05196 -0.03L0.05196 -0.03" fill="black" stroke="none" />
+</g>
+<g transform="translate(310 10.000000000000009) rotate(45) scale(100 -100)">
+<path d="M0.0 0.06L-0.05196 -0.03L0.05196 -0.03" fill="black" stroke="none" />
+</g>
+<g transform="translate(325 25) rotate(45) scale(100 -100)">
+<path d="M0.0 0.06L-0.05196 -0.03L0.05196 -0.03" fill="black" stroke="none" />
+</g>
+<g transform="translate(335 35.00000000000001) rotate(45) scale(100 -100)">
+<line x1="0" y1="-0.05" x2="0" y2="0.05" stroke="black" stroke-width="0.02"/>
+</g>
+<g transform="translate(326.1611652351682 43.83883476483186) rotate(45) scale(100 -100)">
+<line x1="0" y1="0.05" x2="0" y2="-0.05" stroke="black" stroke-width="0.02"/><line x1="0" y1="0" x2="0.1" y2="0" stroke="black" stroke-width="0.02"/><circle cx="0.15" cy="0" r="0.05" stroke="black" fill="none" stroke-width="0.02"/>
+</g>
+<g transform="translate(480 87.5) rotate(0) scale(100 -100)">
+<line x1="0.0" y1="0.05" x2="0.0" y2="-0.05" stroke="black" stroke-width="0.02"/><line x1="0.0" y1="0" x2="-0.1" y2="0" stroke="black" stroke-width="0.02"/><circle cx="-0.15" cy="0" r="0.05" stroke="black" fill="none" stroke-width="0.02"/>
+</g>
+<g transform="translate(480 100) rotate(0) scale(100 -100)">
+<line x1="0" y1="-0.05" x2="0" y2="0.05" stroke="black" stroke-width="0.02"/>
+</g>
+</svg>
