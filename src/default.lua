@@ -58,6 +58,47 @@ output = plot_network {
     model=model,
 }
 
+
+
+-- Symbols
+--
+function draw_symbol(o) 
+    if o._elem == "signal" then
+        a = "" 
+        xl = -o._symbol_info.origin
+        xr = xl + o._symbol_info.width
+        ytop    = 0.125
+        ybottom = -0.125
+
+        --a = a.. rect(xl,ybottom,xr,ytop)
+
+        if o.dir == "up" then
+            a = a.. line(0,0.05,0,-0.05)
+            a = a.. line(0,0,0.1,0)
+            a = a.. circle(0.15,0,0.05)
+        else 
+            a = a.. line(xr-0,0.05,  xr-0,-0.05)
+            a = a.. line(xr-0,0,     xr-0.1,0)
+            a = a.. circle(xr-0.15,0,0.05)
+        end
+
+        return a
+    elseif o._elem == "trainDetector" then
+        return line(0,-0.05,0,0.05)
+    elseif o._elem == "balise" then
+        a = ""
+        s = 0.06
+        x0,y0 = 0.0*s,1.0*s
+        x1,y1 = -0.866*s, -0.5*s
+        x2,y2 = 0.866*s, -0.5*s
+        return fillpath({{x0,y0},{x1,y1},{x2,y2}})
+    else
+        log_warn("No symbol support for element type " .. tostring(o._elem))
+        return ""
+    end
+end 
+
+
 -- Write output
 --
 if output_format == nil or output_format == "json" then
@@ -82,49 +123,24 @@ elseif output_format == "tikz" or output_format == "pdf" then
     function circle(x,y,r)
         return "\\draw ("..x..","..y..") circle ("..r..");"
     end
+    function fillpath(xs)
+        local a = ""
+        local first = true
+        for i,v in ipairs(xs) do
+            if first then
+                first = false
+            else
+                a = a .. " -- "
+            end
+            a = a .. "(" .. v[1] .. "," .. v[2] .. ")"
+        end
+        return "\\path[fill=black] " .. a .. ";"
+    end
 
     tikz = ""
-    tikz = tikz .. (tikz_tracks   { data = output, style = "thick, black" })
+    tikz = tikz .. (tikz_tracks   { data = output, style = "thick, black", title=title })
     tikz = tikz .. (tikz_switches { data = output, style = "" })
-    tikz = tikz .. (tikz_symbols  { data = output, draw = function(o) 
-        if o._elem == "signal" then
-            a = "" 
-            xl = -o._symbol_info.origin
-            xr = xl + o._symbol_info.width
-            ytop    = 0.125
-            ybottom = -0.125
-
-            --a = a.. rect(xl,ybottom,xr,ytop)
-
-            if o.dir == "up" then
-                a = a.. line(0,0.05,0,-0.05)
-                a = a.. line(0,0,0.1,0)
-                a = a.. circle(0.15,0,0.05)
-            else 
-                a = a.. line(xr-0,0.05,  xr-0,-0.05)
-                a = a.. line(xr-0,0,     xr-0.1,0)
-                a = a.. circle(xr-0.15,0,0.05)
-            end
-
-            return a
-        elseif o._elem == "trainDetector" then
-            return line(0,-0.05,0,0.05)
-        elseif o._elem == "balise" then
-            a = ""
-            s = 0.06
-            x0,y0 = 0.0*s,1.0*s
-            x1,y1 = -0.866*s, -0.5*s
-            x2,y2 = 0.866*s, -0.5*s
-            function coord(x,y) return "(" .. tostring(x) .. "," .. tostring(y) .. ")" end
-            a = a.. "\\path[fill=black] "..coord(x0,y0) 
-                               .. " -- " .. coord(x1,y1)
-                               .. " -- " .. coord(x2,y2) .. ";"
-            return a
-        else
-            log_warn("No symbol support for element type " .. tostring(o._elem))
-            return ""
-        end
-    end })
+    tikz = tikz .. (tikz_symbols  { data = output, draw = draw_symbol})
 
     if output_format == "tikz" then 
         write(output_file, tikz)
@@ -137,20 +153,47 @@ elseif output_format == "tikz" or output_format == "pdf" then
 
 
 elseif output_format == "svg" or output_format == "png" then
+    function rect(x0,y0,x1,y1)
+        return "<rect x=\"" .. x0 .. "\" y=\"" .. y0 .. "\"" ..  " width=\"" .. (y1-y0) .. "\" height=\"".. (x1-x0) .. "\" />"
+    end
+    function line(x0,y0,x1,y1)
+        return "<line x1=\"" .. x0 .. "\" y1=\"" .. y0 .. "\" x2=\"" .. x1 .. "\" y2=\"" .. y1 .. "\" stroke=\"black\" stroke-width=\"0.02\"/>"
+    end
+    function circle(x,y,r)
+        return "<circle cx=\"".. x .. "\" cy=\"".. y .. "\" r=\"".. r .. "\" stroke=\"black\" fill=\"none\" stroke-width=\"0.02\"/>"
+    end
+    function fillpath(xs)
+        local a = ""
+        local first = true
+        for i,v in ipairs(xs) do
+            if first then
+                first = false
+                a = a .. "M" .. v[1] .. " " .. v[2]
+            else
+                a = a .. "L" .. v[1] .. " " .. v[2]
+            end
+        end
+        return "<path d=\"" .. a .. "\" fill=\"black\" stroke=\"none\" />"
+    end
+
+    function box_draw(o) 
+        xl = -o._symbol_info.origin
+        xr = xl + o._symbol_info.width
+        ytop    = 0.125
+        ybottom = -0.125
+        return "<rect x=\"" .. tostring(xl) .. "\" width=\"" .. tostring(xr-xl) .. "\" y=\"" .. tostring(ybottom) .. "\" height=\"" .. tostring(ytop-ybottom) .. "\" />"
+    end 
+
     scale = 100.0
     size = drawing_size { data = output }
     svg = ""
-    svg = svg .. (svg_tracks   { data = output, scale=scale, size=size,
-        style="fill=\"none\" stroke=\"black\" stroke-width=\"5\"" })
+    svg = svg .. (svg_tracks   { data = output, scale=scale, size=size, title = title ,
+        style="fill=\"none\" stroke=\"black\" stroke-width=\"3\"" })
     svg = svg .. (svg_switches { data = output, scale=scale, size=size,
         style="fill=\"black\"" })
     svg = svg .. (svg_symbols  { data = output, scale=scale, size=size,
-        draw = function(o) 
-            x0,y0 = -o._symbol_info.origin, 0
-            x1,y1 = o._symbol_info.width, -0.25*o._symbol_info.level
-            return ""
-        end })
-    svg = svg_document { contents = svg, scale = scale, size = size }
+        draw = draw_symbol})
+    svg = svg_document { contents = svg, scale = scale, size = size}
 
     if output_format == "svg" then
         write(output_file, svg)

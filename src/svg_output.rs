@@ -166,6 +166,15 @@ fn get_edge<'l>(t :rlua::Table<'l>, n :&str, p :&str) -> Result<rlua::Table<'l>,
 }
 
 pub fn svg_symbols<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<rlua::Value<'l>,rlua::Error> {
+    let size :rlua::Table= args.get("size")?;
+    let _w :f64 = size.get(1)?;
+    let h :f64 = size.get(2)?;
+    let scale :f64 = args.get("scale")?;
+
+    let cx = |x| scale*x;
+    let cy = |y| scale*(h-y);
+
+
     let mut out = String::new();
     let model = args.get::<_,rlua::Table>("data")?;
     let symbols = model.get::<_,rlua::Table>("symbols")?;
@@ -175,11 +184,15 @@ pub fn svg_symbols<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>) -> Result<r
         let s :rlua::Table = s?;
         let pt  = point_from_lua(s.get("point")?)?;
         let tan  = point_from_lua(s.get("tangent")?)?;
-        let _deg = rad2deg(angle(tan));
+        let deg = rad2deg(angle(tan));
         trace!("svg symbols point/tangent {:?} {:?}", pt, tan);
         let draw :String = draw_func.call(s)?;
         // TODO translate coordinate system
+
+        out.push_str(&format!("<g transform=\"translate({} {}) rotate({}) scale({} {})\">\n", 
+                              cx(pt.0), cy(pt.1), -deg, scale,-scale ));
         out.push_str(&draw);
+        out.push_str(&format!("\n</g>\n"));
     }
 
     Ok(rlua::Value::String(ctx.create_string(&out)?))
