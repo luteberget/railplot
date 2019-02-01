@@ -23,7 +23,7 @@ Further command line usage is presented in the help output:
 
 ```shell
 > railplot --help
-railplot 0.2.1
+railplot 0.3.1
 Bjørnar Luteberget <luteberget@gmail.com>
 Linear schematic railway drawings.
 See manual at https://github.com/luteberget/railplot/.
