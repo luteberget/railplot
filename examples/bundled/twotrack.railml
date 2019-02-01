@@ -22,16 +22,15 @@
             <ocsElements>
                 <signals>
                     <signal id="sig1" name="Signal 1" pos="50.0" type="main"  dir="up"/>
-                    <signal id="sig2" name="Signal 2" pos="252.0" type="main" dir="up"/>
-                    <signal id="sig3" name="Signal 3" pos="350.0" type="main" dir="up"/>
-                    <signal id="sig3" name="Signal 3" pos="850.0" type="main" dir="up"/>
+                    <signal id="sig1" name="Signal 1" pos="950.0" type="main"  dir="down"/>
+                    <signal id="sig2" name="Signal 2" pos="650.0" type="main" dir="up"/>
+                    <signal id="sig3" name="Signal 3" pos="350.0" type="main" dir="down"/>
                 </signals>
                 <trainDetectionElements>
-                    <trainDetector id="d0" name="detector 1" pos="10.0" />
                     <trainDetector id="d1" name="detector 1" pos="50.0" />
-                    <trainDetector id="d2" name="detector 2" pos="251.0" />
+                    <trainDetector id="d2" name="detector 2" pos="650.0" />
+                    <trainDetector id="d2" name="detector 2" pos="950.0" />
                     <trainDetector id="d3" name="detector 2" pos="350.0" />
-                    <trainDetector id="d4" name="detector 2" pos="390.0" />
                 </trainDetectionElements>
             </ocsElements>
         </track>
@@ -46,22 +45,18 @@
             </trackTopology>
             <ocsElements>
                 <signals>
-                    <signal id="sig1" name="Signal 1" pos="350.0" type="main"  dir="up"/>
-                    <signal id="sig1" name="Signal 1" pos="500.0" type="main"  dir="down"/>
+                    <signal id="sig1" name="Signal 1" pos="350.0" type="main"  dir="down"/>
+                    <signal id="sig1" name="Signal 1" pos="650.0" type="main"  dir="up"/>
                 </signals>
                 <balises>
-                    <balise id="bal" name="balise1" pos="600.0" />
-                    <balise id="bal" name="balise1" pos="610.0" />
-                    <balise id="bal" name="balise1" pos="620.0" />
-                    <balise id="bal" name="balise1" pos="630.0" />
-                    <balise id="bal" name="balise1" pos="640.0" />
-                    <balise id="bal" name="balise1" pos="650.0" />
-                    <balise id="bal" name="balise1" pos="660.0" />
-                    <balise id="bal" name="balise1" pos="670.0" />
+                    <balise id="bal" name="balise1" pos="351.0" />
+                    <balise id="bal" name="balise1" pos="354.0" />
+                    <balise id="bal" name="balise1" pos="649.0" />
+                    <balise id="bal" name="balise1" pos="646.0" />
                 </balises>
                 <trainDetectionElements>
                     <trainDetector id="d0" name="detector 1" pos="350.0" />
-                    <trainDetector id="d0" name="detector 1" pos="500.0" />
+                    <trainDetector id="d0" name="detector 1" pos="649.9" />
                 </trainDetectionElements>
             </ocsElements>
         </track>

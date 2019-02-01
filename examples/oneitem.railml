@@ -15,6 +15,7 @@
             </trackTopology>
             <ocsElements>
                 <signals>
+                    <signal id="sig1" name="Signal 1" pos="49.0" type="main"  dir="up"/>
                     <signal id="sig1" name="Signal 1" pos="50.0" type="main"  dir="down"/>
                     <signal id="sig1" name="Signal 1" pos="60.0" type="main"  dir="down"/>
                     <signal id="sig1" name="Signal 1" pos="70.0" type="main"  dir="down"/>
@@ -25,6 +26,14 @@
                     <signal id="sig1" name="Signal 1" pos="71.0" type="main"  dir="up"/>
                     <signal id="sig1" name="Signal 1" pos="81.0" type="main"  dir="up"/>
                 </signals>
+                <balises>
+                    <balise id="x" name="x" pos="60.0" />
+                    <balise id="x" name="x" pos="61.0" />
+                    <balise id="x" name="x" pos="62.0" />
+                    <balise id="x" name="x" pos="63.0" />
+                    <balise id="x" name="x" pos="64.0" />
+                    <balise id="x" name="x" pos="65.0" />
+                </balises>
             </ocsElements>
         </track>
     </tracks>

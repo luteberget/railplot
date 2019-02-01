@@ -19,7 +19,7 @@ const INF :isize = 10_000_000;
 // vars/constraints.
 type Unsat<CId> = Vec<CId>;
 
-#[derive(Copy,Clone,Debug)]
+#[derive(Copy,Clone,Debug,Hash,PartialEq,Eq)]
 pub struct DVar(usize);
 pub struct Differences<CId> {
     vars  :Vec<Option<String>>,
@@ -220,16 +220,75 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         self.distance_map[0] - self.distance_map[x]
     }
 
-//    pub fn optimize(&self, func :Expression) -> Vec<isize> {
-//
-//    }
-}
+    pub fn optimize(&self, goal :HashMap<DVar,isize>) -> Result<HashMap<DVar,isize>,String> {
+        debug!("Running Differences.optimize");
+        let mut max_iter = 500*goal.len()*goal.len();
+        let mut values = (0..self.num_vars())
+            .map(|i| self.get_value(DVar(i)) as f64).collect::<Vec<_>>();
 
-pub enum Expression {
-    Constant(isize),
-    Variable(DVar),
-    Add(Box<Expression>,Box<Expression>),
-    Mul(Box<Expression>,Box<Expression>),
+        let mut constraints :Vec<(usize,usize,isize)>= Vec::new();
+        for (xi,out) in self.edges.iter().enumerate() {
+            for (xj, &Edges { weight: w, .. }) in out {
+                if w < INF {
+                    constraints.push((xi,*xj,w));
+                }
+            }
+        }
+        trace!("Constraints: {:?}", constraints);
+
+        // Set values to goal
+        for (&DVar(x),&v) in &goal { values[x] = v as f64; }
+
+        // Project onto constraints' feasible region.
+        loop {
+            let (cmax,cval) = {
+                let (mut cmax, mut cval) = (0,-INF as f64);
+                let constraint_values = constraints.iter()
+                    .map(|(xi,xj,w)| values[*xi]-values[*xj]-(*w as f64)).enumerate();
+                for (i,v) in constraint_values {
+                    if v > cval {
+                        cmax = i;
+                        cval = v;
+                    }
+                }
+                (cmax,cval)
+            };
+
+            if cval <= 0.01 {
+                break Ok(goal.into_iter().map(|(k,_)| (k,values[k.0].round() as isize)).collect())
+            }
+
+            {
+                let (i,j,w) = constraints[cmax];
+                trace!("Max violated constraint {:?} --  {} {} ",(i,j,w),values[i],values[j]);
+            }
+
+            let (xi,xj,_) = constraints[cmax];
+            if goal.contains_key(&DVar(xi)) && goal.contains_key(&DVar(xj)) {
+                //let (quot,rem) = (cval/2,cval%2);
+                let half = cval*0.5;
+                trace!("moving {}={}->{} {}={}->{}", xi,values[xi],values[xi]-half,
+                                                       xj,values[xj],values[xj]+half);
+                values[xi] -= half;
+                values[xj] += half;
+            } else if goal.contains_key(&DVar(xi)) {
+                trace!("moving {}={}->{}", xi,values[xi],values[xi]-cval);
+                values[xi] -= cval;
+            } else if goal.contains_key(&DVar(xj)) {
+                trace!("moving {}={}->{}", xj,values[xj],values[xj]+cval);
+                values[xj] += cval;
+            } else {
+                return Err(format!("Violated constraint which is not in goal set."));
+            }
+
+            if max_iter == 0 {
+                return Err(format!("Optimization did not converge."));
+            } else {
+                max_iter -= 1;
+                trace!("diffsolver optimize iteration {}", max_iter);
+            }
+        }
+    }
 }
 
 
@@ -394,3 +453,52 @@ fn test2() {
 }
 
 
+
+#[test]
+fn test3() {
+    let mut d = Differences::new();
+
+    let node1 = d.new_var();
+    let node2 = d.new_var();
+
+    let s1 = d.new_var();
+    let s2 = d.new_var();
+    let s3 = d.new_var();
+
+    d.add_constraint(0,node1,node2,-1000);
+    d.enable(0).unwrap();
+
+    d.add_constraint(1,node1,s1,-10);
+    d.add_constraint(2,s1,s2,-10);
+    d.add_constraint(3,s2,s3,-10);
+    d.add_constraint(4,s3,node2,-10);
+    d.enable(1).unwrap();
+    d.enable(2).unwrap();
+    d.enable(3).unwrap();
+    d.enable(4).unwrap();
+
+    println!("n1={}, s1={}, s2={}, s3={}, n2={}", 
+             d.get_value(node1),
+             d.get_value(s1),
+             d.get_value(s2),
+             d.get_value(s3),
+             d.get_value(node2));
+
+    let mut goal = HashMap::new();
+    goal.insert(s1,500);
+    goal.insert(s2,500);
+    goal.insert(s3,600);
+    let mut expected = HashMap::new();
+    expected.insert(s1,495);
+    expected.insert(s2,505);
+    expected.insert(s3,600);
+
+    println!("Optimize to {:?}", goal);
+    let opt = d.optimize(goal).unwrap();
+    println!("Optimized: {:?}", opt);
+
+    assert_eq!(opt,expected);
+
+    println!("\n\ntest ok\n\n");
+
+}

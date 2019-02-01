@@ -4,7 +4,8 @@ use diffsolver::*;
 use diffsolver::minisat::Bool;
 use diffsolver::minisat::unary::*;
 use ordered_float::OrderedFloat;
-use log::{info,debug,trace};
+use log::{info,debug,trace,warn};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Edge {
@@ -31,6 +32,15 @@ pub struct Output {
 pub struct Node {
     pub shape :Shape,
     pub pos :f64,
+}
+
+pub fn idx_between<T>(slice :&[T], r :Result<usize,usize>) -> (usize,usize) {
+    let r = match r {
+        Ok(i) => i-1,
+        Err(i) => i-1,
+    };
+    let r = if r <= 0 { 0 } else { if r < slice.len()-1 { r } else { slice.len()-2 } };
+    (r,r+1)
 }
 
 pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair], goals :&[Goal]) -> Result<Output, String> {
@@ -243,13 +253,53 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         s.sat.add_clause(vec![c]);
     }
 
-    let (node_x_values,symbol_x_values) = {
+    let node_x_values = {
         let m = s.solve().map_err(|_| format!("Unable to solve."))?;
-        let node_x_values = symbol_node_xs.iter()
-            .map(|v| m.diff.get_value(*v)).collect::<Vec<_>>();
-        let symbol_x_values = symbol_xs.iter()
-            .map(|v| m.diff.get_value(*v)).collect::<Vec<_>>();
-        (node_x_values, symbol_x_values)
+        symbol_node_xs.iter().map(|v| m.diff.get_value(*v)).collect::<Vec<_>>()
+    };
+
+    let node_abspos_values = nodes.iter().enumerate()
+        .map(|(i,n)| (OrderedFloat(n.pos), node_x_values[i])).collect::<Vec<_>>();
+    debug!("node abspos values {:?}", node_abspos_values);
+
+    // TODO the optimization of symbol x values to be close to their proportional
+    //   location can be done locally for each edge, which might be faster, and
+    //   the whole optimization can be skipped if the edge is "saturated" with symbols,
+    //   i.e. there is no room to move.
+    let symbol_x_values = {
+        let mut goal = HashMap::new();
+        for (i,(_,s)) in symbols.iter().enumerate() {
+            let node_idx = node_abspos_values.binary_search_by_key(&OrderedFloat(s.pos), |&(p,_)| p);
+            let (before,after) = idx_between(&node_abspos_values, node_idx);
+            let ((pos_before,x_before),(pos_after,x_after)) = 
+            (node_abspos_values[before],node_abspos_values[after]);
+            let (pos_before,pos_after) = (pos_before.into_inner(),pos_after.into_inner());
+            let prop = if pos_after - pos_before > 1e-5 {
+                (s.pos - pos_before)/(pos_after - pos_before)
+            } else { 0.0 };
+            let x = (x_before as f64 + prop*(x_after as f64 -x_before as f64)).round() as isize;
+            trace!("Symbol: {:?} {} {} {} {} {} {}", s,pos_before,pos_after,prop,
+                     x_before,x_after,x);
+            goal.insert(symbol_xs[i], x);
+        }
+        let optimized_symbol_x_values = s.diff.optimize(goal);
+        match optimized_symbol_x_values {
+            Ok(values) => {
+                info!("Successfully optimized symbol proportional positions.");
+                let mut vec = vec![0; symbols.len()];
+                let idxs = symbols.iter().enumerate()
+                    .map(|(i,_)| (symbol_xs[i], i)).collect::<HashMap<_,_>>();
+                for (k,v) in values {
+                    vec[idxs[&k]] = v;
+                }
+                vec
+            },
+            Err(msg) => {
+                warn!("Could not optimize symbol x values: {}", msg);
+                let m = s.solve().map_err(|_| format!("Unable to solve."))?;
+                symbol_xs.iter().map(|v| m.diff.get_value(*v)).collect::<Vec<_>>()
+            }
+        }
     };
 
     Ok(Output {
