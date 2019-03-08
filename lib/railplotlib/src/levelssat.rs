@@ -157,14 +157,15 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     //
     // symbol node x deltas
     for (i,dx) in node_delta_xs.iter().enumerate() {
-        let dx0a = s.cond_constraint(symbol_node_xs[i], symbol_node_xs[i+1], 0);
+        //let dx0a = s.cond_constraint(symbol_node_xs[i], symbol_node_xs[i+1], 0);
+        //s.sat.add_clause(vec![!dx.lt_const(0),dx0a]);
+
         let dx0b = s.cond_constraint(symbol_node_xs[i+1], symbol_node_xs[i], 0);
         let dx1a = s.cond_constraint(symbol_node_xs[i], symbol_node_xs[i+1], -1*symbol_factor);
         let dx1b = s.cond_constraint(symbol_node_xs[i+1], symbol_node_xs[i], 1*symbol_factor);
-        s.sat.add_clause(vec![!dx.lt_const(0),dx0a]);
-        s.sat.add_clause(vec![!dx.lt_const(0),dx0b]);
-        s.sat.add_clause(vec![dx.lt_const(0), !dx.lt_const(1), dx1a]);
-        s.sat.add_clause(vec![dx.lt_const(0), !dx.lt_const(1), dx1b]);
+        s.sat.add_clause(vec![!dx.lte_const(0),dx0b]);
+        s.sat.add_clause(vec![dx.lte_const(0), !dx.lte_const(1), dx1a]);
+        s.sat.add_clause(vec![dx.lte_const(0), !dx.lte_const(1), dx1b]);
     }
 
     // (c1) global order
@@ -222,7 +223,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     // After optimization, we extract the node_dx, ndoe_y, edge_y values
     // and use them add constraints to symbol_node_xs.
 
-    let (node_dx_values, node_y_values, edge_y_values) = {
+    let (node_dx_values, node_y_values, edge_y_values, edge_short_values) = {
         let m = s.solve().unwrap();
         let node_dx_values = node_delta_xs.iter()
             .map(|x| m.sat.value(x)).collect::<Vec<_>>();
@@ -230,7 +231,24 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
             .map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
         let edge_y_values = edge_ys.iter()
             .map(|x| m.diff.get_value(*x)).collect::<Vec<_>>();
-        (node_dx_values,node_y_values,edge_y_values)
+        let edge_shapes = edge_shapes.iter().map(|(b,e)| {
+            let begin = if m.sat.value(&b.straight) { EdgeDir::Straight }
+                        else if m.sat.value(&b.up) { EdgeDir::Up }
+                        else if m.sat.value(&b.down) { EdgeDir::Down }
+                        else { panic!() };
+            let end = if m.sat.value(&e.straight) { EdgeDir::Straight }
+                        else if m.sat.value(&e.up) { EdgeDir::Up }
+                        else if m.sat.value(&e.down) { EdgeDir::Down }
+                        else { panic!() };
+            (begin,end)
+        }).collect::<Vec<_>>();
+        let edge_short_values = edge_short.iter().map(|x| m.sat.value(&x.0) || m.sat.value(&x.1)).collect::<Vec<_>>();
+        debug!("Node dx {:?}", node_dx_values);
+        debug!("Edge shapes {:?}", edge_shapes);
+        let sxs = symbol_node_xs.iter().map(|v| m.diff.get_value(*v)).collect::<Vec<_>>();
+        debug!("Symbol Node Xs {:?}", sxs);
+
+        (node_dx_values,node_y_values,edge_y_values, edge_short_values)
     };
 
     // Minimum DX values.
@@ -246,7 +264,8 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         let dy1 = node_y_values[e.a.node] - edge_y_values[i];
         let dy2 = edge_y_values[i] - node_y_values[e.b.node];
         let samedir = dy1.signum() == dy2.signum() && dy1.signum() != 0;
-        let dist = dy1.abs() + dy2.abs() + if samedir { 0 } else { 1 };
+        let short = edge_short_values[i];
+        let dist = dy1.abs() + dy2.abs() + if samedir || short { 0 } else { 1 };
         debug!("Edge {:?} dist{} dy{} dy{} {:?} {:?} {}", e,dist,dy1,dy2,x1,x2,-(dist*symbol_factor));
 
         let c = s.cond_constraint(x1,x2,-(dist*symbol_factor));
@@ -375,7 +394,7 @@ fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff, x :Unary) -> Result
     Ok(())
 }
 
-#[derive(PartialEq,Eq)]
+#[derive(PartialEq,Eq,Debug)]
 enum EdgeDir { Up, Straight, Down }
 
 fn map_portshape(s :&minisat::Model, x :&PortShape) -> EdgeDir {
