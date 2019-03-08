@@ -140,6 +140,17 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         s.sat.add_clause(vec![!short_down,          dx. lt_const(2)]);
         s.sat.add_clause(vec![short_down, short_up, both_straight, dx.gte_const(2)]);
 
+        // X=1 requires either short-edge or straight
+        //s.sat.add_clause(vec![dx.lte_const(0), !dx.lte_const(1), short_down, short_up, both_straight]);
+        //(same as above)
+
+        let all_dx_lte1 = !s.sat.or_literal(
+            node_delta_xs[(e.a.node)..(e.b.node)].iter().map(|x| x.gt_const(1)));
+        // all dx <= 1 on the edge, so there is no stretching freedom
+        // to enusure that later constraints will work on the X axis after Y
+        // values have been fixed, we need at least one "stretchable" element.
+        s.sat.add_clause(vec![!dx.gte_const(2), !all_dx_lte1]);
+
         edge_shapes.push((e_begin,e_end));
     }
 
