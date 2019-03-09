@@ -9,3 +9,4 @@ diffsolver = { path = "../diffsolver" }
 disjoint-sets = "0.4"
 ordered-float = "1.0"
 log = "0.4"
+permutation = "0.2"

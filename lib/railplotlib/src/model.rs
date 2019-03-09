@@ -25,14 +25,14 @@ pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown t
 #[allow(dead_code)]
 pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
 
-#[derive(Debug )]
+#[derive(Debug, Clone)]
 pub struct Node {
     pub name :String,
     pub pos :f64,
     pub shape :Shape,
 }
 
-#[derive(Debug )]
+#[derive(Debug, Clone )]
 pub struct Edge<Obj> {
     pub a :(String,Port),
     pub b :(String,Port),
@@ -47,6 +47,7 @@ pub struct Symbol {
     pub level: isize,
 }
 
+#[derive(Debug)]
 pub struct SchematicGraph<Obj> {
     pub nodes :Vec<Node>,
     pub edges :Vec<Edge<Obj>>,

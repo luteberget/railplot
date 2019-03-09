@@ -25,17 +25,27 @@ pub struct SchematicOutput<Obj> {
 
 pub struct LevelsSatSolver{
     pub criteria: Vec<Goal>,
+
+    /// Set to true to force each node to be at a different x coordinate.
+    pub nodes_distinct :bool,
 }
 
 impl SchematicSolver for LevelsSatSolver {
     fn solve<Obj:Clone>(self, mut model:SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String> {
         info!("Converting schematic graph model to Levels/SAT representation.");
         // Convert 
-        model.nodes.sort_by_key(|n| OrderedFloat(n.pos));
+        let nodes_sort = permutation::sort_by_key(&model.nodes[..], |n| OrderedFloat(n.pos));
+        //model.nodes.sort_by_key(|n| OrderedFloat(n.pos));
+        model.nodes = nodes_sort.apply_slice(model.nodes);
+
         trace!("NODES {:#?}", model.nodes);
         let node_names = model.nodes.iter().enumerate()
             .map(|(i,n)| (n.name.clone(), i)).collect::<HashMap<_,_>>();
-        model.edges.sort_by_key(|e| (node_names[&e.a.0], node_names[&e.b.0]));
+
+        let edges_sort = permutation::sort_by_key(&model.edges[..], |e| (node_names[&e.a.0], node_names[&e.b.0]));
+        //model.edges.sort_by_key(|e| (node_names[&e.a.0], node_names[&e.b.0]));
+
+        model.edges = edges_sort.apply_slice(model.edges);
 
         let symbols_ref = model.edges.iter().enumerate().flat_map(|(i,e)| {
             e.objects.iter().map(move |(s,objref)| (i,s,objref))
@@ -63,7 +73,7 @@ impl SchematicSolver for LevelsSatSolver {
         let nodes = model.nodes.iter().map(|n| levelssat::Node { shape: n.shape.clone(),
          pos: n.pos }).collect::<Vec<_>>();
         let levelssat::Output { node_coords, edge_levels, symbol_xs } = 
-            levelssat::solve(&nodes, &edges, &symbols, &edges_lt, &self.criteria)?;
+            levelssat::solve(&nodes, &edges, &symbols, &edges_lt, &self.criteria, self.nodes_distinct)?;
 
         debug!("result node coodinates  {:?}", node_coords);
         debug!("result edge levels {:?}", edge_levels);
@@ -84,11 +94,17 @@ impl SchematicSolver for LevelsSatSolver {
         // (3) coords for symbols (with y coord) and rotation
         // (4) switches with tangents? TODO
         // (5) something about end-nodes? TODO
-        Ok(SchematicOutput {
+        let mut out = SchematicOutput {
             nodes: model.nodes.into_iter().zip(node_coords.into_iter()).collect(),
             lines: model.edges.into_iter().zip(edge_lines.into_iter()).collect(),
             symbols: symbol_out,
-        })
+        };
+
+        // Invert the sort, so the caller gets it in the same order.
+        out.nodes = nodes_sort.apply_inv_slice(out.nodes);
+        out.lines = edges_sort.apply_inv_slice(out.lines);
+
+        Ok(out)
 
     }
 }

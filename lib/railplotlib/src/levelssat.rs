@@ -43,14 +43,21 @@ pub fn idx_between<T>(slice :&[T], r :Result<usize,usize>) -> (usize,usize) {
     (r,r+1)
 }
 
-pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair], goals :&[Goal]) -> Result<Output, String> {
+pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair], goals :&[Goal], nodes_distinct: bool) -> Result<Output, String> {
     info!("Solving node/edge/symbols model using Levels/SAT method.");
 
 
     let mut s = SATModDiff::new();
 
-        let node_delta_xs = nodes.iter().zip(nodes.iter().skip(1))
+    let node_delta_xs = nodes.iter().zip(nodes.iter().skip(1))
         .map(|_| Unary::new(&mut s.sat,2)).collect::<Vec<_>>();
+
+    if nodes_distinct {
+        for n in &node_delta_xs {
+            s.sat.add_clause(vec![n.gte_const(1)]);
+        }
+    }
+
     let node_ys = nodes.iter().enumerate()
         .map(|(i,_)| s.diff.named_var(Some(format!("ny_{}",i)))).collect::<Vec<_>>();
     let edge_ys = edges.iter().enumerate()
