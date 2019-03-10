@@ -342,6 +342,7 @@ fn plot_network<'l>(ctx :rlua::Context<'l>, args:rlua::Table<'l>)
     let solver = match method.as_str() {
         "levelssat" => Box::new(railplotlib::solvers::LevelsSatSolver { 
             criteria: vec![Goal::Bends, Goal::Height, Goal::Width],
+            nodes_distinct: false,
         }), 
         _ => panic!(),
     };
