@@ -1,0 +1,21 @@
+node b0 begin 0.0
+node b1 begin 1.0
+node sw1 outleftsw 250.0
+node sw2 inrightsw 300.0
+node e0 end 550.0
+node e1 end 551.0
+
+// lower left 
+edge b0.out sw1.trunk
+
+// upper left
+edge b1.out sw2.right
+
+// cross
+edge sw1.left sw2.left
+
+// lower right
+edge sw1.right e0.in
+
+// upper right
+edge sw2.trunk e1.in

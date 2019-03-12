@@ -1,0 +1,15 @@
+// two track example
+node a begin 0.0
+node b outleftsw 250.0
+node c inrightsw 500.0
+node d end 750.0
+
+edge a.out b.trunk
+symbol hs3   50.0 -1 0.3 0.0
+symbol hs3rev 49.0  1 0.3 0.3
+symbol delim 50.0 0 0.001 0.0005
+
+edge b.left c.right
+edge b.right c.left
+edge c.trunk d.in
+

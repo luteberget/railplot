@@ -1,0 +1,16 @@
+// two track example
+node a begin 0.0
+node b outleftsw 250.0
+node b1 outrightsw 260.0
+node c0 inleftsw 490.0
+node c inrightsw 500.0
+node d end 750.0
+
+edge a.out b.trunk
+edge b.left b1.trunk
+edge b.right c.left
+edge b1.left c0.right
+edge b1.right c0.left
+edge c0.trunk c.right
+edge c.trunk d.in
+

@@ -1,0 +1,15 @@
+node a begin 0.0
+node b begin 10.0
+
+node s1 outleftsw 250.0
+node s2 inleftsw  350.0
+
+node c end 500.0
+node d end 510.0
+
+edge a.out s1.trunk
+edge b.out s2.right
+edge s1.left s2.left
+edge s1.right c.in
+edge s2.trunk d.in
+

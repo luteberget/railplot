@@ -1,0 +1,10 @@
+// Balloon loop example
+
+node a begin 0.0
+node b outleftsw 250.0
+node c vertical 500.0
+
+edge a.out b.trunk
+edge b.left c.top
+edge b.right c.bottom
+

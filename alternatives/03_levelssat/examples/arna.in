@@ -1,0 +1,57 @@
+node rbff4z begin 0
+node n11a begin 5027.301093
+node n19b outleftsw 4915.979801
+node n22b outrightsw 4991.979801
+node n31a inleftsw 5491.979801
+node n35b outleftsw 5499.979801
+node n46a inrightsw 6654.979801
+node bergen2 end 14559.178526
+node n72a begin 5302.142269999999
+node n78a inrightsw 5886.142269999999
+node n81a inleftsw 5982.874719
+node n85b outleftsw 6011.883817
+node n105a begin 5067.897662
+node n111a inrightsw 5121.979801
+node n125b outrightsw 5788.005216
+node n131a inleftsw 6164.005216
+node bergen end 11744.709213999999
+node n167b outleftsw 5044.979801
+node n170b outleftsw 5087.979801
+node n174a inleftsw 5149.979801
+node n178b outleftsw 5168.979801
+node n182b outrightsw 5294.979801
+node n187a inrightsw 5396.269189000001
+node n190a inrightsw 5438.065328000001
+node n197b end 5311.01633
+node n199b end 5450.139973
+edge rbff4z.out n19b.trunk
+edge n11a.out n111a.right
+edge n19b.left n111a.left
+edge n19b.right n22b.trunk
+edge n22b.left n31a.right
+edge n22b.right n167b.trunk
+edge n31a.trunk n35b.trunk
+edge n35b.left n81a.left
+edge n35b.right n46a.left
+edge n46a.trunk bergen2.in
+edge n72a.out n78a.left
+edge n78a.trunk n81a.right
+edge n81a.trunk n85b.trunk
+edge n85b.left n131a.left
+edge n85b.right n46a.right
+edge n105a.out n174a.left
+edge n111a.trunk n125b.trunk
+edge n125b.left n131a.right
+edge n125b.right n78a.right
+edge n131a.trunk bergen.in
+edge n167b.left n190a.right
+edge n167b.right n170b.trunk
+edge n170b.left n187a.right
+edge n170b.right n174a.right
+edge n174a.trunk n178b.trunk
+edge n178b.left n197b.in
+edge n178b.right n182b.trunk
+edge n182b.left n187a.left
+edge n182b.right n199b.in
+edge n187a.trunk n190a.left
+edge n190a.trunk n31a.left

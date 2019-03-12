@@ -1,0 +1,64 @@
+node DBinV begin 3
+node n8a inleftsw 366
+node n12b outleftsw 380
+node n15b outrightsw 460
+node n20a inrightsw 1311
+node n30b outleftsw 2456
+node DBinH begin 0
+node n41b outleftsw 122
+node n46b outrightsw 352
+node n49a inrightsw 688
+node n53b outrightsw 720
+node n63a inrightsw 3011
+node n80a inleftsw 3146
+node DBoutV end 3350
+node n90a inleftsw 1300
+node n94b outleftsw 1307
+node n97b outrightsw 1442
+node n107a inleftsw 3029
+node ABoutH end 3347
+node n112a begin 217
+node n114b outleftsw 343
+node SBin end 1541
+node n124a begin 683
+node n126a inrightsw 1004
+node n130a inleftsw 1485
+node ABoutV end 3351
+node n157a begin 807
+node n161b outrightsw 1080
+node n164b end 1217
+node DBoutH end 3348
+edge DBinV.out n8a.right
+edge n8a.trunk n12b.trunk
+edge n12b.left n80a.right
+edge n12b.right n15b.trunk
+edge n15b.left n20a.left
+edge n15b.right n49a.right
+edge n20a.trunk n30b.trunk
+edge n30b.left n80a.left
+edge n30b.right n63a.right
+edge DBinH.out n41b.trunk
+edge n41b.left n8a.left
+edge n41b.right n46b.trunk
+edge n46b.left n49a.left
+edge n46b.right n90a.right
+edge n49a.trunk n53b.trunk
+edge n53b.left n63a.left
+edge n53b.right n126a.right
+edge n63a.trunk DBoutH.in
+edge n80a.trunk DBoutV.in
+edge n90a.trunk n94b.trunk
+edge n94b.left n130a.left
+edge n94b.right n97b.trunk
+edge n97b.left n107a.right
+edge n97b.right n107a.left
+edge n107a.trunk ABoutH.in
+edge n112a.out n114b.trunk
+edge n114b.left n90a.left
+edge n114b.right SBin.in
+edge n124a.out n126a.left
+edge n126a.trunk n130a.right
+edge n130a.trunk ABoutV.in
+edge n157a.out n161b.trunk
+edge n161b.left n164b.in
+edge n161b.right n20a.right
