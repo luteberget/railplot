@@ -8,6 +8,6 @@ ways of encoding and solving the schematic plan problem.
 3. Level-based SAT encoding (Rust program)
 4. Fronts-based SAT encoding (Haskell program using [satplus](https://github.com/koengit/satplus/))
 
-[Table of results](perftable.png)
+![Table of results](perftable.png)
 
-[Comparison figures](comparisonfig.png)
+![Comparison figures](cmpfig.png)
