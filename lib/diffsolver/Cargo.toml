@@ -5,6 +5,6 @@ authors = ["Bjørnar Luteberget <luteberget@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-minisat= { git = "https://github.com/luteberget/minisat-rs" }
+minisat = "*"
 time="0.1"
 log="0.4"

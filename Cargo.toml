@@ -10,13 +10,11 @@ rlua = "*"
 failure ="*"
 exitfailure ="*"
 serde_json ="*"
-
-minidom = "*"
-quick-xml="*"
+minidom = "0.10"
+quick-xml = "0.13"
 ordered-float="*"
 diffsolver = {path = "lib/diffsolver"}
 railplotlib = {path = "lib/railplotlib"}
 itertools = "*"
-
 log = "0.4"
 env_logger = "0.6"

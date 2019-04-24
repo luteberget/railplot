@@ -65,7 +65,7 @@ fn main() -> Result<(),ExitFailure> {
     // Setup logging, use environment variable if available, otherwise command line switches.
     if let Ok(ref envvar) = std::env::var("RAILPLOT_LOG") {
         env_logger::Builder::new()
-            .parse(envvar)
+            .parse_filters(envvar)
             .init();
     } else {
         env_logger::Builder::new()

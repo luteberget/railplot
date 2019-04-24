@@ -566,7 +566,6 @@ fn goal_height(s :&mut SATModDiff, edge_ys :&[DVar]) -> Result<(), String> {
 struct DiffOffset(Option<DVar>, isize);
 
 fn symbol_edgeclass_constraints(nodes :&[Node], edges :&[Edge], symbols :&[(EdgeRef,&Symbol)], symbol_node_xs :&[DVar], symbol_xs :&[DVar], symbol_factor :isize) -> Vec<(DiffOffset,DiffOffset)> {
-    use std::collections::HashMap;
     let edge_ports = edges.iter().enumerate().flat_map(|(i, Edge { a,b })| vec![(i,a),(i,b)])
         .map(|(i,NodePort { node, port })| ((*node,*port),i)).collect::<HashMap<_,_>>();
     let mut sameedgesabove = Vec::new();
