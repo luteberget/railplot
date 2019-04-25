@@ -11,7 +11,7 @@ z3 = "*"
 rolling = { git = "https://github.com/koengit/trainspotting.git" }
 serde_json = "*"
 svg = "*"
-diffsolver = { path = "../lib/diffsolver" }
+diffsolver = { path = "../../lib/diffsolver" }
 itertools="*"
 lp-modeler ="*"
 disjoint-sets = "*"
