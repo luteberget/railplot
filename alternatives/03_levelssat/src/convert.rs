@@ -83,7 +83,8 @@ pub fn convert(x :&StaticInfrastructure) -> Result<(String,OrigEdges,PosRange), 
     let (nodes,edges) = major(&gnode,&x)?;
     let pos = mk_pos(&nodes, &edges, &gnode)?;
 
-    let lookup_names = x.node_names.iter().map(|(k,v)| (*v,k.clone())).collect::<HashMap<usize,String>>();
+    //let lookup_names = x.node_names.iter().map(|(k,v)| (*v,k.clone())).collect::<HashMap<usize,String>>();
+	let lookup_names = (0..(x.nodes.len())).map(|i| (i, format!("n{}", i))).collect::<HashMap<usize,String>>();
 
     for i in nodes  {
         let name = &lookup_names[&i];

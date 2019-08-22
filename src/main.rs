@@ -369,20 +369,20 @@ fn tikzpdf<'l>(_ctx :rlua::Context<'l>,
     use std::process;
 
     info!("Starting pdflatex");
-    let mut proc = process::Command::new("pdflatex")
+    let mut process = process::Command::new("pdflatex")
         .args(&["-jobname",&filename])
         .stdin(process::Stdio::piped())
         .stdout(process::Stdio::piped())
         .spawn().to_lua_err()?;
 
     {
-        let stdin = proc.stdin.as_mut()
+        let stdin = process.stdin.as_mut()
             .ok_or(format!("Failed to open pdflatex input pipe."))
             .to_lua_err()?;
         use std::io::Write;
         stdin.write_all(input.as_bytes()).to_lua_err()?;
     }
-    proc.wait_with_output().to_lua_err()?;
+    process.wait_with_output().to_lua_err()?;
     info!("Pdflatex finished");
     Ok(())
 }
@@ -402,20 +402,20 @@ fn rsvgpng<'l>(_ctx :rlua::Context<'l>,
     }
 
     info!("Starting rsvg-convert");
-    let mut proc = process::Command::new("rsvg-convert")
+    let mut process = process::Command::new("rsvg-convert")
         .args(&cliargs)
         .stdin(process::Stdio::piped())
         .stdout(process::Stdio::piped())
         .spawn().to_lua_err()?;
 
     {
-        let stdin = proc.stdin.as_mut()
+        let stdin = process.stdin.as_mut()
             .ok_or(format!("Failed to open pdflatex input pipe."))
             .to_lua_err()?;
         use std::io::Write;
         stdin.write_all(input.as_bytes()).to_lua_err()?;
     }
-    proc.wait_with_output().to_lua_err()?;
+    process.wait_with_output().to_lua_err()?;
     info!("rsvg-convert finished");
     Ok(())
 }
