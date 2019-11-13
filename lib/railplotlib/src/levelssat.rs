@@ -339,6 +339,10 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         }
     };
 
+    let x_min = *node_x_values.iter().min().unwrap();
+    let node_x_values :Vec<isize> = node_x_values.into_iter().map(|x| x - x_min).collect();
+    let symbol_x_values :Vec<isize> = symbol_x_values.into_iter().map(|x| x - x_min).collect();
+
     Ok(Output {
         node_coords: node_x_values.into_iter().zip(node_y_values.into_iter())
             .map(|(x,y)| ((x as f64)/(symbol_factor as f64), y as f64)).collect(),
