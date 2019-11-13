@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet, BinaryHeap};
 use crate::model::*;
 use std::hash::Hash;
-use log::{trace};
+use log::{trace,debug};
 
 type NodeRef = usize;
 type EdgeRef = usize;
@@ -114,7 +114,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
 }
 
 pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
-    trace!("Computing transitive reduction");
+    debug!("Computing transitive reduction");
     let map = {
         let mut map = HashMap::new();
         for (a,b) in set.iter() {

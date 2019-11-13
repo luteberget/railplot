@@ -228,6 +228,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     for goal in goals {
         match goal {
             Goal::Bends  => { goal_bends(&mut s, &edge_shapes)?; },
+            Goal::LocalY  => { goal_local_ydiff(&mut s, &edges_lt, &edge_ys)?; },
             Goal::Width  => { goal_width(&mut s, &node_delta_xs)?; },
             Goal::Height => { goal_height(&mut s, &edge_ys)?; },
             Goal::Diagonals => { goal_diagonals(&mut s, &edge_shapes)?; },
@@ -265,6 +266,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         debug!("Edge shapes {:?}", edge_shapes);
         let sxs = symbol_node_xs.iter().map(|v| m.diff.get_value(*v)).collect::<Vec<_>>();
         debug!("Symbol Node Xs {:?}", sxs);
+        debug!("Symbol min {:?}", sxs.iter().min());
 
         (node_dx_values,node_y_values,edge_y_values, edge_short_values)
     };
@@ -471,6 +473,48 @@ fn goal_shortedges(s :&mut SATModDiff, edge_short :&[(Bool,Bool)]) -> Result<(),
         edge_short.iter().flat_map(|(u,d)| vec![!*u,!*d])
         .map(Unary::from_bool).collect(), max_negshorts+1);
     optimize_and_commit_unary("shortedges",s,sum_negshorts)
+}
+
+fn goal_local_ydiff(s :&mut SATModDiff, edges_lt :&[EdgePair], edge_ys :&[DVar]) -> Result<(), String> {
+    let mut upper_bound = {
+        let m = s.solve().map_err(|_| format!("Could not solve."))?;
+        let mut bound = 1;
+        for (a,b) in edges_lt {
+            let y1 = m.diff.get_value(edge_ys[*a]);
+            let y2 = m.diff.get_value(edge_ys[*b]);
+            assert!(y1 <= y2);
+            bound = bound.max(y2-y1);
+        }
+        bound
+    };
+
+    loop {
+        let assumptions = {
+            let mut assumptions = Vec::new();
+            for (a,b) in edges_lt {
+                let c1 = s.cond_constraint(edge_ys[*b], edge_ys[*a], upper_bound-1);
+                assumptions.push(c1);
+            }
+            assumptions };
+
+        match s.solve_under_assumptions(&assumptions) {
+            Ok(_) => {
+                upper_bound -= 1;
+                debug!("(^) Updated localydiff to {}", upper_bound);
+            },
+            Err(()) => {
+                debug!("(^) could not compress localYdiff<{}.",upper_bound);
+                break;
+            }
+        }
+    };
+
+    for (a,b) in edges_lt {
+        let c = s.cond_constraint(edge_ys[*b], edge_ys[*a], upper_bound);
+        s.sat.add_clause(vec![c]);
+    }
+    s.solve().map_err(|_| format!("Could not compress in Y direction"))?;
+    Ok(())
 }
 
 fn goal_bends(s :&mut SATModDiff, edge_shapes :&[(PortShape,PortShape)]) -> Result<(),String> {
