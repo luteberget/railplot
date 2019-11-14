@@ -186,6 +186,147 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         s.sat.add_clause(vec![dx.lte_const(0), !dx.lte_const(1), dx1b]);
     }
 
+
+    //
+    // bug fix idea: 
+    //  if you have a begin/end, its immediate y neighbors need to have a distance constraint.
+    //
+    // if track end AND y-neighbor to an edge ending in a switch on the left/right.
+    //
+    // if track begin AND y-neighbor to an edge starting in a switch on the left/right.
+    //
+    // let (dx,dy) be the difference between switch node and begin/end node.
+    // then for every bound b: (dy < b) OR (dx > b+1)
+    //
+
+    for (ea,eb) in edges_lt {
+        // case 1: a starts in a start node, b starts in switch left/right.
+        // case 2: a ends in an end ndoe, b ends in switch left/right.
+        // case 3: b start in a start node, a starts in switch left/right.
+        // case 3: b ends in an end node, a ends in switch left/right.
+        let (short_up_lo, short_down_lo) = edge_short[*ea];
+        let (short_up_hi, short_down_hi) = edge_short[*eb];
+        let (lo,hi) = (&edges[*ea], &edges[*eb]);
+
+        if let Port::Out = lo.a.port {
+            if let Port::Left | Port::Right = hi.a.port {
+                println!("bug1 CASE1 {} {}", ea, eb);
+
+                // CASE 1
+
+                for bound in 0..10 {
+
+                    // lo_y - hi_y <= b
+                    // dy <= b.
+                    let dyc = s.cond_constraint(
+                        node_ys[lo.a.node],
+                        node_ys[hi.a.node], bound);
+
+                    // dx >= b+1.
+                    // lo_x - hi_x >= b+1
+                    // hi_x - lo_x <= -(b+1)
+                    let dxc = s.cond_constraint(
+                        symbol_node_xs[hi.a.node],
+                        symbol_node_xs[lo.a.node],
+                        -(2 + bound)*symbol_factor);
+
+                    let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[hi.a.node].shape, 
+                                                hi.a.port, slanted[hi.a.node]);
+
+                    s.sat.add_clause(vec![short_up_hi, !e_begin.up, dyc, dxc]);
+                }
+
+            }
+        } 
+        if let Port::In = lo.b.port {
+            if let Port::Left | Port::Right = hi.b.port {
+                println!("bug1 CASE2 {} {}", ea, eb);
+                // CASE 2
+
+
+                for bound in 0..10 {
+
+                    // lo_y - hi_y <= b
+                    // dy <= b.
+                    let dyc = s.cond_constraint(
+                        node_ys[lo.b.node],
+                        node_ys[hi.b.node], bound);
+
+                    // dx >= b+1.
+                    // hi_x - lo_x >= b+1
+                    // lo_x - hi_x <= -(b+1)
+                    let dxc = s.cond_constraint(
+                        symbol_node_xs[lo.b.node],
+                        symbol_node_xs[hi.b.node],
+                        -(2 + bound)*symbol_factor);
+
+                    let e_end = mk_port_shape(EdgeSide::End, &nodes[hi.b.node].shape, 
+                                              hi.b.port, slanted[hi.b.node]);
+
+                    s.sat.add_clause(vec![short_down_hi, !e_end.down, dyc, dxc]);
+                }
+
+            }
+        } 
+        if let Port::Out = hi.a.port {
+            if let Port::Left | Port::Right = lo.a.port {
+                println!("bug1 CASE3 {} {}", ea, eb);
+
+                for bound in 0..10 {
+
+                    // lo_y - hi_y <= b
+                    // dy <= b.
+                    let dyc = s.cond_constraint(
+                        node_ys[lo.a.node],
+                        node_ys[hi.a.node], bound);
+
+                    // dx >= b+1.
+                    // lo_x - hi_x >= b+1
+                    // hi_x - lo_x <= -(b+1)
+                    let dxc = s.cond_constraint(
+                        symbol_node_xs[lo.a.node],
+                        symbol_node_xs[hi.a.node],
+                        -(2 + bound)*symbol_factor);
+
+                    let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[lo.a.node].shape, 
+                                                lo.a.port, slanted[lo.a.node]);
+
+                    s.sat.add_clause(vec![short_down_lo, !e_begin.down, dyc, dxc]);
+                }
+
+            }
+        } 
+        if let Port::In = hi.b.port {
+            if let Port::Left | Port::Right = lo.b.port {
+                println!("bug1 CASE4 {} {}", ea, eb);
+
+                for bound in 0..10 {
+
+                    // lo_y - hi_y <= b
+                    // dy <= b.
+                    let dyc = s.cond_constraint(
+                        node_ys[lo.b.node],
+                        node_ys[hi.b.node], bound);
+
+                    // dx >= b+1.
+                    // lo_x - hi_x >= b+1
+                    // hi_x - lo_x <= -(b+1)
+                    let dxc = s.cond_constraint(
+                        symbol_node_xs[hi.b.node],
+                        symbol_node_xs[lo.b.node],
+                        -(2 + bound)*symbol_factor);
+
+                    let e_end = mk_port_shape(EdgeSide::End, &nodes[lo.b.node].shape, 
+                                                lo.b.port, slanted[lo.b.node]);
+
+                    s.sat.add_clause(vec![short_up_lo, !e_end.up, dyc, dxc]);
+                }
+
+            }
+        }
+    }
+
+
     // (c1) global order
     {
         let mut v = Vec::new();

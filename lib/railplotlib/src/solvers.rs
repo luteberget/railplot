@@ -54,6 +54,8 @@ impl SchematicSolver for LevelsSatSolver {
         let symbols = symbols_ref.iter().map(|(i,s,_)| (*i,*s))
             .collect::<Vec<_>>();
 
+        println!("MODEL EDGES");
+        for e in &model.edges { println!("  {:?} {:?}", e.a,e.b); }
         let edges = model.edges.iter().map(|e| {
             levelssat::Edge {
                 a: levelssat::NodePort { node: node_names[&e.a.0], port: e.a.1 },
@@ -68,6 +70,7 @@ impl SchematicSolver for LevelsSatSolver {
 
         let mut edges_lt = edgeorder::edgeorder(&model.nodes, &edges2);
         edgeorder::transitive_reduction(&mut edges_lt);
+        edgeorder::fix_edgeorder_ambiguities(&model.nodes, &edges2, &mut edges_lt);
         let edges_lt : Vec<(usize,usize)> = edges_lt.into_iter().collect();
 
         let nodes = model.nodes.iter().map(|n| levelssat::Node { shape: n.shape.clone(),

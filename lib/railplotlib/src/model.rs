@@ -3,7 +3,7 @@
 /// as strongly-typed Rust, and conversion to/from Lua
 
 #[derive(Debug, Copy, Clone)]
-pub enum Dir { Up, Down }
+pub enum Dir { Up=0, Down=1 }
 
 impl Dir {
     pub fn opposite(&self) -> Dir {

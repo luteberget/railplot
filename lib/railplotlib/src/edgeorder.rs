@@ -1,13 +1,51 @@
 use std::collections::{HashMap, HashSet, BinaryHeap};
 use crate::model::*;
 use std::hash::Hash;
-use log::{trace,debug};
+use log::{trace,debug,warn};
 
 type NodeRef = usize;
 type EdgeRef = usize;
 type EdgePair = (EdgeRef,EdgeRef);
 type NodePort = (NodeRef, Port);
 type Edge = (NodePort,NodePort);
+
+pub fn fix_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order :&mut HashSet<EdgePair>) {
+    while let Err((a,b)) = find_edgeorder_ambiguities(nodes, edges, partial_order) {
+        warn!("  *inserting ({},{})", a,b);
+        partial_order.insert((a,b));
+    }
+}
+
+pub fn find_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order :&HashSet<EdgePair>) -> Result<(), EdgePair> {
+    let partial_order = transitive_closure(partial_order);
+    let mut edges = edges.iter().enumerate().collect::<Vec<_>>();
+    edges.sort_by_key(|(_i,(start,_end))| -(start.0 as isize));
+    let mut active_edges = Vec::new();
+    for n_i in 0..(nodes.len()-1) {
+        while edges.last().map(|(_i,(start,_end))| start.0) == Some(n_i) {
+            active_edges.push(edges.pop().unwrap());
+        }
+        active_edges.retain(|(_i,(_start,end))| end.0 > n_i);
+
+        debug!("Active edges between {} and {}: {:?}", n_i, n_i+1, active_edges);
+
+        active_edges.sort_by(|(a,_),(b,_)| {
+            use std::cmp::Ordering;
+            if partial_order.contains(&(*a,*b)) { return Ordering::Less; }
+            if partial_order.contains(&(*b,*a)) { return Ordering::Greater; }
+            return Ordering::Equal;
+        });
+
+        for ((a,_),(b,_)) in active_edges.iter().zip(active_edges.iter().skip(1)) {
+            if !partial_order.contains(&(*a,*b)) {
+                warn!("Edge order ambiguity {}-{} between nodes {}-{}", a,b,n_i,n_i+1);
+                return Err((*a,*b));
+            }
+        }
+    }
+    
+    Ok(())
+}
 
 pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
     trace!("computing edge order");
@@ -113,6 +151,40 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
     lt
 }
 
+pub fn transitive_closure<T: Eq+Hash+Copy+Clone>(set :&HashSet<(T,T)>) -> HashSet<(T,T)> {
+    let mut result :HashMap<T, HashSet<T>> = HashMap::new();
+    for (a,b) in set { result.entry(*a).or_insert(HashSet::new()).insert(*b); }
+    let mut prev_delta = result.clone();
+    let mut delta = HashMap::new();
+    loop {
+
+        for (a,s) in prev_delta.iter() { 
+            for x in s.iter() {
+                for b in result.get(x).iter().flat_map(|x| x.iter()) {
+                    let exists = result.get(a).map(|a| a.contains(b)).unwrap_or(false);
+                    if exists { continue; }
+
+                    delta.entry(*a).or_insert(HashSet::new()).insert(*b);
+                }
+            }
+        }
+
+        if delta.len() == 0 {
+            break;
+        } else {
+            for (a,s) in delta.iter() { 
+                for b in s.iter() {
+                    result.entry(*a).or_insert(HashSet::new()).insert(*b);
+                }
+            }
+            std::mem::swap(&mut delta, &mut prev_delta);
+            delta.clear();
+        }
+    }
+
+    result.into_iter().flat_map(|(a,s)| s.into_iter().map(move |b| (a,b))).collect()
+}
+
 pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
     debug!("Computing transitive reduction");
     let map = {
@@ -136,4 +208,5 @@ pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
         }
     }
 }
+
 
