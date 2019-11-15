@@ -11,8 +11,8 @@ type Edge = (NodePort,NodePort);
 
 pub fn fix_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order :&mut HashSet<EdgePair>) {
     while let Err((a,b)) = find_edgeorder_ambiguities(nodes, edges, partial_order) {
-        warn!("  *inserting ({},{})", a,b);
-        partial_order.insert((a,b));
+        warn!("  *inserting ({},{})", b,a);
+        partial_order.insert((b,a));
     }
 }
 

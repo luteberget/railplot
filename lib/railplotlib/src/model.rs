@@ -15,15 +15,15 @@ impl Dir {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum Side { Left, Right }
+pub enum Side { Left=0, Right=1 }
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 #[allow(dead_code)]
-pub enum Port { In, Out, Left, Right, Trunk, Top, Bottom, TopBottom /* Unknown top/bottom */ }
+pub enum Port { In=0, Out=1, Left=2, Right=3, Trunk=4 }
 
 #[derive(Debug, Copy, Clone)]
 #[allow(dead_code)]
-pub enum Shape { Begin, End, Switch(Side, Dir), Vertical, }
+pub enum Shape { Begin, End, Switch(Side, Dir) }
 
 #[derive(Debug, Clone)]
 pub struct Node {

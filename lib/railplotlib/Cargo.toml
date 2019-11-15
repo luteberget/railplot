@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Bjørnar Luteberget <luteberget@gmail.com>"]
 edition = "2018"
 
+[lib]
+crate-type = ["cdylib"]
+
 [dependencies]
 diffsolver = { path = "../diffsolver" }
 disjoint-sets = "0.4"
