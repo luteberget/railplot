@@ -7,7 +7,7 @@ use log::{info,debug,trace};
 
 #[allow(unused)]
 pub enum Goal {
-    Width,Height,Bends,Diagonals,Nodeshapes,Shortedges,LocalY
+    Width,Height,Bends,Diagonals,Nodeshapes,Shortedges,LocalY,LocalX
 }
 
 type Pt = (f64,f64);

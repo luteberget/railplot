@@ -359,7 +359,8 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     }
 
     // (c2) edge-class order and bounds
-    for (a,b) in symbol_edgeclass_constraints(&nodes, &edges, &symbols, &symbol_node_xs, &symbol_xs, symbol_factor) {
+    for (a,b) in symbol_edgeclass_constraints(&nodes, &edges, &symbols, 
+                                              &symbol_node_xs, &symbol_xs, symbol_factor) {
         debug!("Constraint {:?}", (a,b));
         match (a,b) {
             // So, we have x+a <= y+b, and we want  z - w < -m,    z+m<w
@@ -383,7 +384,8 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     for goal in goals {
         match goal {
             Goal::Bends  => { goal_bends(&mut s, &edge_shapes)?; },
-            Goal::LocalY  => { goal_local_ydiff(&mut s, &edges_lt, &edge_ys)?; },
+            Goal::LocalY  => { goal_local_ydiff(&mut s, edges, &edges_lt, &edge_ys)?; },
+            Goal::LocalX  => { goal_local_xdiffs(&mut s, &node_delta_xs, &nodes)?; },
             Goal::Width  => { goal_width(&mut s, &node_delta_xs)?; },
             Goal::Height => { goal_height(&mut s, &edge_ys)?; },
             Goal::Diagonals => { goal_diagonals(&mut s, &edge_shapes)?; },
@@ -496,6 +498,8 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         }
     };
 
+    goal_symbol_width(&mut s, symbol_node_xs[0], symbol_node_xs[symbol_node_xs.len()-1], symbol_factor)?;
+
     let x_min = *node_x_values.iter().min().unwrap();
     let node_x_values :Vec<isize> = node_x_values.into_iter().map(|x| x - x_min).collect();
     let symbol_x_values :Vec<isize> = symbol_x_values.into_iter().map(|x| x - x_min).collect();
@@ -556,7 +560,7 @@ fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool) -> PortShap
     }
 }
 
-fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff, x :Unary) -> Result<(), String> {
+fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff, x :&Unary) -> Result<(), String> {
     debug!("(^) Optimizing {}", name);
     let (mut lo, mut hi) = (0,x.bound());
     while lo < hi {
@@ -568,8 +572,9 @@ fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff, x :Unary) -> Result
         }
     }
     assert_eq!(lo,hi);
+    println!("Adding clause {:?}", vec![x.lte_const(lo as isize)]);
     s.sat.add_clause(vec![x.lte_const(lo as isize)]);
-    s.solve().map_err(|_| format!("Could not compress {}",name))?;
+    s.solve().map_err(|_| format!("Could not compress {} to {}",name, lo))?;
     Ok(())
 }
 
@@ -589,7 +594,7 @@ fn goal_width(s :&mut SATModDiff, node_delta_xs :&Vec<Unary>) -> Result<(), Stri
         node_delta_xs.iter().map(|x| m.sat.value(x)).sum()
     };
     let sum_x = Unary::sum_truncate(&mut s.sat, node_delta_xs.clone(), max_x +1);
-    optimize_and_commit_unary("width",s,sum_x)
+    optimize_and_commit_unary("width",s,&sum_x)
 }
 
 fn goal_diagonals(s :&mut SATModDiff, edge_shapes :&[(PortShape,PortShape)]) -> Result<(),String> {
@@ -603,7 +608,7 @@ fn goal_diagonals(s :&mut SATModDiff, edge_shapes :&[(PortShape,PortShape)]) -> 
     let sum_negstraight = Unary::sum_truncate(&mut s.sat, 
                negstraight_bits.collect(), max_negstraight+1);
 
-    optimize_and_commit_unary("diagonals",s,sum_negstraight)
+    optimize_and_commit_unary("diagonals",s,&sum_negstraight)
 }
 
 fn goal_nodeshapes(s :&mut SATModDiff, slants :&[Bool]) -> Result<(),String> {
@@ -613,7 +618,7 @@ fn goal_nodeshapes(s :&mut SATModDiff, slants :&[Bool]) -> Result<(),String> {
     };
     let sum = Unary::sum_truncate(&mut s.sat, slants.iter().cloned()
                                   .map(Unary::from_bool).collect(), max+1);
-    optimize_and_commit_unary("nodeshape",s,sum)
+    optimize_and_commit_unary("nodeshape",s,&sum)
 
 }
 
@@ -627,50 +632,80 @@ fn goal_shortedges(s :&mut SATModDiff, edge_short :&[(Bool,Bool)]) -> Result<(),
     let sum_negshorts = Unary::sum_truncate(&mut s.sat,
         edge_short.iter().flat_map(|(u,d)| vec![!*u,!*d])
         .map(Unary::from_bool).collect(), max_negshorts+1);
-    optimize_and_commit_unary("shortedges",s,sum_negshorts)
+    optimize_and_commit_unary("shortedges",s,&sum_negshorts)
 }
 
-fn goal_local_ydiff(s :&mut SATModDiff, edges_lt :&[EdgePair], edge_ys :&[DVar]) -> Result<(), String> {
-    let mut upper_bound = {
-        let m = s.solve().map_err(|_| format!("Could not solve."))?;
-        let mut bound = 1;
-        for (a,b) in edges_lt {
-            let y1 = m.diff.get_value(edge_ys[*a]);
-            let y2 = m.diff.get_value(edge_ys[*b]);
-            assert!(y1 <= y2);
-            bound = bound.max(y2-y1);
-        }
-        bound
-    };
-
-    loop {
-        let assumptions = {
-            let mut assumptions = Vec::new();
-            for (a,b) in edges_lt {
-                let c1 = s.cond_constraint(edge_ys[*b], edge_ys[*a], upper_bound-1);
-                assumptions.push(c1);
-            }
-            assumptions };
-
-        match s.solve_under_assumptions(&assumptions) {
-            Ok(_) => {
-                upper_bound -= 1;
-                debug!("(^) Updated localydiff to {}", upper_bound);
-            },
-            Err(()) => {
-                debug!("(^) could not compress localYdiff<{}.",upper_bound);
-                break;
-            }
-        }
-    };
-
-    for (a,b) in edges_lt {
-        let c = s.cond_constraint(edge_ys[*b], edge_ys[*a], upper_bound);
-        s.sat.add_clause(vec![c]);
+fn goal_local_xdiffs(s :&mut SATModDiff, node_delta_xs :&[Unary], nodes :&[Node]) -> Result<(), String> {
+    let mut nodes_by_distance = nodes.iter().zip(nodes.iter().skip(1))
+        .map(|(a,b)| ordered_float::OrderedFloat(b.pos - a.pos))
+        .zip(node_delta_xs).enumerate().collect::<Vec<_>>();
+    nodes_by_distance.sort_by_key(|(_i,(d,_))| *d);
+    for (i,(_d, x_diff)) in nodes_by_distance {
+        optimize_and_commit_unary(&format!("dx_{}", i), s, x_diff)?;
     }
-    s.solve().map_err(|_| format!("Could not compress in Y direction"))?;
     Ok(())
 }
+
+fn goal_local_ydiff(s :&mut SATModDiff, edges :&[Edge], edges_lt :&[EdgePair], edge_ys :&[DVar]) -> Result<(), String> {
+    let mut edges_lt = edges_lt.to_vec();
+    edges_lt.sort_by_key(|(a,b)| 
+        if edges[*a].a.node == edges[*b].a.node ||
+           edges[*a].b.node == edges[*b].b.node { 
+                0
+            } else { 1 });
+    for (a,b) in edges_lt.iter() {
+        let m = s.solve().map_err(|_| format!("Could not solve."))?;
+        let y1 = m.diff.get_value(edge_ys[*a]);
+        let y2 = m.diff.get_value(edge_ys[*b]);
+        assert!(y1 <= y2);
+        let mut bound = y2 - y1;
+        loop {
+            let c1 = s.cond_constraint(edge_ys[*b], edge_ys[*a], bound-1);
+            match s.solve_under_assumptions(&vec![c1]) {
+                Ok(_) => {
+                    bound -= 1;
+                    debug!("(^) Updated localydiff({},{}) to {}", a, b, bound);
+                },
+                Err(()) => {
+                    debug!("(^) could not compress localYdiff({},{})<{}.",a, b, bound);
+                    break;
+                },
+            }
+        }
+
+        let c = s.cond_constraint(edge_ys[*b], edge_ys[*a], bound);
+        s.sat.add_clause(vec![c]);
+    }
+
+    Ok(())
+}
+
+fn goal_symbol_width(s :&mut SATModDiff, xi: DVar, xf :DVar, symbol_factor :isize) -> Result<(), String> {
+    let mut bound = {
+        let m = s.solve().map_err(|_| format!("Could not solve."))?;
+        m.diff.get_value(xf) - m.diff.get_value(xi)
+    };
+
+
+    loop {
+        let c1 = s.cond_constraint(xf, xi, bound - symbol_factor);
+        if s.solve_under_assumptions(&vec![c1]).is_ok() {
+            bound -= symbol_factor;
+            debug!("(^) Updated sx to {}", bound);
+        } else {
+            debug!("(^) could not compress sx<{}.", bound);
+            break;
+        }
+
+        let m = s.solve().map_err(|_| format!("Could not solve before symbol width final constraint."))?;
+        let c = s.cond_constraint(xf, xi, bound);
+        s.sat.add_clause(vec![c]);
+        let m = s.solve().map_err(|_| format!("Could not solve after symbol width final constraint."))?;
+    }
+
+    Ok(())
+}
+
 
 fn goal_bends(s :&mut SATModDiff, edge_shapes :&[(PortShape,PortShape)]) -> Result<(),String> {
     let max_bends = {
@@ -697,9 +732,8 @@ fn goal_bends(s :&mut SATModDiff, edge_shapes :&[(PortShape,PortShape)]) -> Resu
 
     }).collect::<Vec<_>>();
     let sum_bends = Unary::sum_truncate(&mut s.sat, bends_unary, max_bends+1);
-    optimize_and_commit_unary("bends", s, sum_bends)
+    optimize_and_commit_unary("bends", s, &sum_bends)
 }
-
 
 
 fn goal_height(s :&mut SATModDiff, edge_ys :&[DVar]) -> Result<(), String> {
