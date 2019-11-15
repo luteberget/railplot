@@ -327,6 +327,20 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     }
 
 
+    // if we have two edges neighboring in/out with overlapping km, then 
+    // they should have xdiff >= 1.
+    for (a,b) in edges_lt.iter().cloned().chain(edges_lt.iter().map(|(a,b)| (*b,*a))) {
+        if let Port::Out = edges[a].a.port {
+            if let Port::In = edges[b].b.port {
+                if nodes[edges[b].b.node].pos > nodes[edges[a].a.node].pos {
+                    s.sat.add_clause(((edges[a].a.node) .. (edges[b].b.node)) 
+                                     .map(|x| node_delta_xs[x].gte_const(1)));
+                }
+            }
+        }
+    }
+
+
     // (c1) global order
     {
         let mut v = Vec::new();
