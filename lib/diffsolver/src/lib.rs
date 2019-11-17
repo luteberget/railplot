@@ -41,7 +41,7 @@ pub struct Constraint<N, CId> {
     weight :N,
 }
 
-impl<N :Num+Ord+Debug+Display+Bounded+Copy+Clone, CId:Copy+Hash+Eq+Debug> Differences<N, CId> {
+impl<N :Num+PartialOrd+Debug+Display+Bounded+Copy+Clone, CId:Copy+Hash+Eq+Debug> Differences<N, CId> {
     pub fn new() -> Self {
         let mut d = Differences { 
             vars: Vec::new(),
@@ -306,7 +306,7 @@ pub struct SATModDiff<N> {
     diff_time :Duration,
 }
 
-impl<N :Num+Ord+Debug+Display+Bounded+Copy+Clone> SATModDiff<N> {
+impl<N :Num+PartialOrd+Debug+Display+Bounded+Copy+Clone> SATModDiff<N> {
     pub fn report_time(&self) {
         println!("(T) solver time in SAT: {}, in Diff: {}", 
                  self.sat_time, self.diff_time);
