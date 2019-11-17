@@ -1,4 +1,6 @@
 pub extern crate minisat;
+use num_traits::{Num, Bounded};
+use std::fmt::Display;
 extern crate time;
 use time::{PreciseTime, Duration};
 
@@ -11,8 +13,6 @@ use std::collections::VecDeque;
 use std::fmt::Debug;
 
 type CAddr = (usize,usize,usize);
-//const INF :f64 = 1e7;
-const INF :isize = 10_000_000;
 
 // Unsatisfiability is reported as a list of edges
 // constituting a negative cycle in the graph of 
@@ -21,26 +21,27 @@ type Unsat<CId> = Vec<CId>;
 
 #[derive(Copy,Clone,Debug,Hash,PartialEq,Eq)]
 pub struct DVar(usize);
-pub struct Differences<CId> {
+
+pub struct Differences<N, CId> {
     vars  :Vec<Option<String>>,
     constraints  :HashMap<CId,CAddr>,
-    edges        :Vec<HashMap<usize, Edges<CId>>>,
-    distance_map :Vec<isize>,
+    edges        :Vec<HashMap<usize, Edges<N, CId>>>,
+    distance_map :Vec<N>,
 }
 
-pub struct Edges<CId> {
-    weight: isize,
-    constraints: Vec<Constraint<CId>>,
+pub struct Edges<N, CId> {
+    weight: N,
+    constraints: Vec<Constraint<N, CId>>,
 }
 
 #[derive(Copy,Clone, Debug)]
-pub struct Constraint<CId> {
+pub struct Constraint<N, CId> {
     id :Option<CId>,
     active :bool,
-    weight :isize,
+    weight :N,
 }
 
-impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
+impl<N :Num+Ord+Debug+Display+Bounded+Copy+Clone, CId:Copy+Hash+Eq+Debug> Differences<N, CId> {
     pub fn new() -> Self {
         let mut d = Differences { 
             vars: Vec::new(),
@@ -63,22 +64,22 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         let v = DVar(self.vars.len());
         self.vars.push(name);
         self.edges.push(HashMap::new());
-        self.distance_map.push(0);
+        self.distance_map.push(N::zero());
         if v.0 > 0 {
             // add zero edge
-            self.edges[0].insert(v.0, Edges { weight: 0, constraints: 
-                vec![Constraint { id: None, active: true, weight: 0 }] });
+            self.edges[0].insert(v.0, Edges { weight: N::zero(), constraints: 
+                vec![Constraint { id: None, active: true, weight: N::zero() }] });
         }
         v
     }
 
-    pub fn add_constraint(&mut self, id :CId, DVar(x) :DVar, DVar(y) :DVar, k :isize) {
+    pub fn add_constraint(&mut self, id :CId, DVar(x) :DVar, DVar(y) :DVar, k :N) {
         if self.constraints.contains_key(&id) || x >= self.vars.len() || y >= self.vars.len() {
             panic!("Inconsistent ids in new_constraint.");
         }
 
         let edge = self.edges[x].entry(y)
-            .or_insert(Edges { weight: INF, constraints: vec![] });
+            .or_insert(Edges { weight: N::max_value(), constraints: vec![] });
 
         edge.constraints.push(Constraint { id: Some(id), active: false, weight: k });
         let idx = edge.constraints.len() -1;
@@ -101,7 +102,7 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         trace!("  (T) disabling {:?}", (id,(x,&self.vars[x],y,&self.vars[y],i)));
 
         // Update weight from all active
-        let mut w = INF;
+        let mut w = N::max_value();
         for &Constraint { active, weight, .. } in &self.edges[x][&y].constraints {
             if active && weight < w {
                 w = weight;
@@ -145,7 +146,7 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
                 trace!("  (T) Backtracking through parent list {:?}", parents);
                 let (mut a, mut b) = (x,y);
                 loop {
-                    let (mut w, mut i) = (INF, None);
+                    let (mut w, mut i) = (N::max_value(), None);
                     trace!("  (T) backtrack {:?}", &self.edges[a][&b].constraints); 
                     for &Constraint { active, weight, id } in &self.edges[a][&b].constraints {
                         if active && weight < w {
@@ -174,11 +175,11 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         }
     }
 
-    fn get_weight(&self, u:usize, v:usize) -> isize {
+    fn get_weight(&self, u:usize, v:usize) -> N {
         self.edges[u][&v].weight
     }
 
-    fn detect_cycle(&self, u:usize, v:usize) -> Result<Vec<isize>, Vec<Option<usize>>> {
+    fn detect_cycle(&self, u:usize, v:usize) -> Result<Vec<N>, Vec<Option<usize>>> {
         trace!("  (T) detect_cycle({},{})", u,v);
         if !(self.distance_map[v] > self.distance_map[u] + self.get_weight(u,v)) {
             trace!("  (T) detect_cycle: no update");
@@ -216,9 +217,12 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         Ok(d)
     }
 
-    pub fn get_value(&self, DVar(x) :DVar) -> isize {
+    pub fn get_value(&self, DVar(x) :DVar) -> N {
         self.distance_map[0] - self.distance_map[x]
     }
+}
+
+impl<CId:Copy+Hash+Eq+Debug> Differences<isize, CId> {
 
     pub fn optimize(&self, goal :HashMap<DVar,isize>) -> Result<HashMap<DVar,isize>,String> {
         debug!("Running Differences.optimize");
@@ -229,7 +233,7 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         let mut constraints :Vec<(usize,usize,isize)>= Vec::new();
         for (xi,out) in self.edges.iter().enumerate() {
             for (xj, &Edges { weight: w, .. }) in out {
-                if w < INF {
+                if w < isize::max_value() {
                     constraints.push((xi,*xj,w));
                 }
             }
@@ -242,7 +246,7 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
         // Project onto constraints' feasible region.
         loop {
             let (cmax,cval) = {
-                let (mut cmax, mut cval) = (0,-INF as f64);
+                let (mut cmax, mut cval) = (0,f64::min_value());
                 let constraint_values = constraints.iter()
                     .map(|(xi,xj,w)| values[*xi]-values[*xj]-(*w as f64)).enumerate();
                 for (i,v) in constraint_values {
@@ -294,15 +298,15 @@ impl<CId:Copy+Hash+Eq+Debug> Differences<CId> {
 
 
 // Sat modulo difference logic (on isize ints) solver
-pub struct SATModDiff {
+pub struct SATModDiff<N> {
     pub sat :minisat::Solver,
-    pub diff :Differences<Lit>,
+    pub diff :Differences<N, Lit>,
     pub sat_clauses_generated :usize,
     sat_time :Duration,
     diff_time :Duration,
 }
 
-impl SATModDiff {
+impl<N :Num+Ord+Debug+Display+Bounded+Copy+Clone> SATModDiff<N> {
     pub fn report_time(&self) {
         println!("(T) solver time in SAT: {}, in Diff: {}", 
                  self.sat_time, self.diff_time);
@@ -317,7 +321,7 @@ impl SATModDiff {
     //    unimplemented!()
     //}
 
-    pub fn cond_constraint(&mut self, x :DVar, y :DVar, k :isize) -> Bool {
+    pub fn cond_constraint(&mut self, x :DVar, y :DVar, k :N) -> Bool {
         let lit = match self.sat.new_lit() {
             Bool::Lit(x) => x,
             _ => panic!(),
@@ -327,7 +331,7 @@ impl SATModDiff {
         Bool::Lit(lit)
     }
 
-    fn theory_consistent(model :&minisat::Model, diff :&mut Differences<Lit>) -> Result<(), Vec<Lit>> {
+    fn theory_consistent(model :&minisat::Model, diff :&mut Differences<N, Lit>) -> Result<(), Vec<Lit>> {
         // first, disable constraints
         let cs = diff.constraints.iter().map(|(k,_)| *k).collect::<Vec<_>>();
         for &c in &cs {
@@ -385,11 +389,11 @@ impl SATModDiff {
         }
     }
 
-    pub fn solve<'a>(&'a mut self) -> Result<SATDiffModel<'a>, ()> {
+    pub fn solve<'a>(&'a mut self) -> Result<SATDiffModel<'a,N>, ()> {
         self.solve_under_assumptions(&vec![])
     }
 
-    pub fn solve_under_assumptions<'a>(&'a mut self, v :&[Bool]) -> Result<SATDiffModel<'a>, ()> {
+    pub fn solve_under_assumptions<'a>(&'a mut self, v :&[Bool]) -> Result<SATDiffModel<'a,N>, ()> {
         if !self.make_consistent(v) { return Err(()); }
         match self.sat.solve_under_assumptions(v.iter().cloned()) {
             Ok(m) => Ok(SATDiffModel { sat: m, diff :&self.diff }),
@@ -399,9 +403,9 @@ impl SATModDiff {
 
 }
 
-pub struct SATDiffModel<'a> {
+pub struct SATDiffModel<'a, N> {
     pub sat :minisat::Model<'a>,
-    pub diff :&'a Differences<Lit>,
+    pub diff :&'a Differences<N, Lit>,
 }
 
 #[test]
@@ -426,6 +430,7 @@ fn test1() {
         _ => panic!(),
     }
 }
+
 
 #[test]
 fn test2() {
