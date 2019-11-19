@@ -21,7 +21,7 @@ pub fn find_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order 
     let mut edges = edges.iter().enumerate().collect::<Vec<_>>();
     edges.sort_by_key(|(_i,(start,_end))| -(start.0 as isize));
     let mut active_edges = Vec::new();
-    for n_i in 0..(nodes.len()-1) {
+    for (n_i,_) in nodes.iter().enumerate() {
         while edges.last().map(|(_i,(start,_end))| start.0) == Some(n_i) {
             active_edges.push(edges.pop().unwrap());
         }

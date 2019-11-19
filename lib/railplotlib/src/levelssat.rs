@@ -46,6 +46,8 @@ pub fn idx_between<T>(slice :&[T], r :Result<usize,usize>) -> (usize,usize) {
 pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair], goals :&[Goal], nodes_distinct: bool) -> Result<Output, String> {
     info!("Solving node/edge/symbols model using Levels/SAT method.");
 
+    if nodes.len() == 0 { return Err(format!("No nodes specified.")); }
+    if edges.len() == 0 { return Err(format!("No edges specified.")); }
 
     let mut s :SATModDiff<isize> = SATModDiff::new();
 
@@ -210,7 +212,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
 
         if let Port::Out = lo.a.port {
             if let Port::Left | Port::Right = hi.a.port {
-                println!("bug1 CASE1 {} {}", ea, eb);
+                debug!("bug1 CASE1 {} {}", ea, eb);
 
                 // CASE 1
 
@@ -240,7 +242,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         } 
         if let Port::In = lo.b.port {
             if let Port::Left | Port::Right = hi.b.port {
-                println!("bug1 CASE2 {} {}", ea, eb);
+                debug!("bug1 CASE2 {} {}", ea, eb);
                 // CASE 2
 
 
@@ -270,7 +272,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         } 
         if let Port::Out = hi.a.port {
             if let Port::Left | Port::Right = lo.a.port {
-                println!("bug1 CASE3 {} {}", ea, eb);
+                debug!("bug1 CASE3 {} {}", ea, eb);
 
                 for bound in 0..10 {
 
@@ -298,7 +300,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         } 
         if let Port::In = hi.b.port {
             if let Port::Left | Port::Right = lo.b.port {
-                println!("bug1 CASE4 {} {}", ea, eb);
+                debug!("bug1 CASE4 {} {}", ea, eb);
 
                 for bound in 0..10 {
 
@@ -572,7 +574,7 @@ fn optimize_and_commit_unary(name :&str, s :&mut SATModDiff<isize>, x :&Unary) -
         }
     }
     assert_eq!(lo,hi);
-    println!("Adding clause {:?}", vec![x.lte_const(lo as isize)]);
+    debug!("Adding clause {:?}", vec![x.lte_const(lo as isize)]);
     s.sat.add_clause(vec![x.lte_const(lo as isize)]);
     s.solve().map_err(|_| format!("Could not compress {} to {}",name, lo))?;
     Ok(())
@@ -697,10 +699,8 @@ fn goal_symbol_width(s :&mut SATModDiff<isize>, xi: DVar, xf :DVar, symbol_facto
             break;
         }
 
-        let m = s.solve().map_err(|_| format!("Could not solve before symbol width final constraint."))?;
         let c = s.cond_constraint(xf, xi, bound);
         s.sat.add_clause(vec![c]);
-        let m = s.solve().map_err(|_| format!("Could not solve after symbol width final constraint."))?;
     }
 
     Ok(())
@@ -871,7 +871,7 @@ fn symbol_edgeclass_constraints(nodes :&[Node], edges :&[Edge], symbols :&[(Edge
                 end(edge_ports[&(i,Port::In)], -1, 0.0, 1);
                 end(edge_ports[&(i,Port::In)], -1, 0.0, -1);
             },
-            _ => panic!("Unsupported shape"),
+            //_ => panic!("Unsupported shape"),
         }
     }
 

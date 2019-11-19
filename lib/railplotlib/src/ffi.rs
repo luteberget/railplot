@@ -38,7 +38,11 @@ pub extern "system" fn railplot_enable_logging() {
 pub extern "system" fn railplot_new() -> *mut FFISolver {
     Box::into_raw(Box::new(FFISolver {
         solver :Some(LevelsSatSolver { 
-            criteria: Vec::new(),
+            criteria: vec![
+                Goal::Bends,
+                Goal::Width,
+                Goal::Height,
+            ],
             nodes_distinct: false
         }),
         graph: Some(SchematicGraph {
