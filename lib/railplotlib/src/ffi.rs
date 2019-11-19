@@ -1,12 +1,37 @@
 use crate::model::*;
 use crate::solvers::*;
 use std::ffi::CString;
+use log::*;
 
 pub struct FFISolver {
     solver :Option<LevelsSatSolver>,
     graph :Option<SchematicGraph<()>>,
     solution: Option<SchematicOutput<()>>,
     error_message: Option<CString>,
+}
+
+#[cfg(target_os = "windows")]
+#[no_mangle]
+pub extern "system" fn railplot_enable_logging() {
+    struct SimpleLogger;
+    impl log::Log for SimpleLogger {
+        fn enabled(&self, metadata: &Metadata) -> bool {
+            metadata.level() <= Level::Trace
+        }
+
+        fn log(&self, record: &Record) {
+            if self.enabled(record.metadata()) {
+                let s = format!("{} - {}\n", record.level(), record.args());
+                let cstr = std::ffi::CString::new(s).unwrap();
+                unsafe {winapi::um::debugapi::OutputDebugStringA(cstr.as_ptr()); }
+            }
+        }
+
+        fn flush(&self) {}
+    }
+
+    drop(log::set_boxed_logger(Box::new(SimpleLogger))
+        .map(|()| log::set_max_level(LevelFilter::Trace)));
 }
 
 #[no_mangle]
@@ -96,6 +121,7 @@ pub extern "system" fn railplot_solve(s :*mut FFISolver) -> u32 {
     let s = unsafe { &mut *s};
     let solver = s.solver.take().unwrap();
     let graph = s.graph.take().unwrap();
+    debug!("Starting solve with graph:\n{:#?}",  graph);
     match solver.solve(graph) {
         Ok(result) => {
             s.solution = Some(result);
