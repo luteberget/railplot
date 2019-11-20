@@ -68,7 +68,7 @@ impl SchematicSolver for LevelsSatSolver {
             (node_names[&e.b.0],e.b.1))
         }).collect::<Vec<_>>();
 
-        let mut edges_lt = edgeorder::edgeorder(&model.nodes, &edges2);
+        let mut edges_lt = edgeorder::edgeorder(&model.nodes, &edges2)?;
         edgeorder::transitive_reduction(&mut edges_lt);
         edgeorder::fix_edgeorder_ambiguities(&model.nodes, &edges2, &mut edges_lt);
         let edges_lt : Vec<(usize,usize)> = edges_lt.into_iter().collect();

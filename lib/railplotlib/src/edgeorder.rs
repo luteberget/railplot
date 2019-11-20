@@ -47,7 +47,45 @@ pub fn find_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order 
     Ok(())
 }
 
-pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
+#[test]
+pub fn edgeorder_termination_issue() {
+    println!("Edge order termiation issue test");
+    
+    let nodes = vec![
+        Node {
+            name: format!("start"),
+            pos: 0.0,
+            shape: Shape::Begin,
+        },
+        Node {
+            name: format!("a"),
+            pos: 1.0,
+            shape: Shape::Switch(Side::Right, Dir::Down),
+        },
+        Node {
+            name: format!("b"),
+            pos: 2.0,
+            shape: Shape::Switch(Side::Left, Dir::Up),
+        },
+        Node {
+            name: format!("start"),
+            pos: 3.0,
+            shape: Shape::End,
+        },
+    ];
+
+    let edges = vec![
+        ((1,Port::Right),(2,Port::Left)),
+        ((2,Port::Right),(1,Port::Left)),
+        ((0,Port::Out),  (1,Port::Trunk)),
+        ((2,Port::Trunk), (3,Port::In)),
+    ];
+
+    let result = edgeorder(&nodes, &edges);
+    assert!(result.is_err());
+}
+
+pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,String> {
     trace!("computing edge order");
     let mut lt :HashSet<EdgePair> = HashSet::new();
 
@@ -55,7 +93,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
     let port_edge = edges.iter().enumerate().flat_map(|(i,e)| vec![(i,e.0),(i,e.1)])
         .map(|(i,(n,p))| ((n,p),i)).collect::<HashMap<_,_>>();
 
-    let lr = |n:NodeRef, dir:Dir| {
+    let lr = |n:NodeRef, dir:Dir| -> Result<(Vec<EdgeRef>,Vec<EdgeRef>), String> {
         // BinaryHeap is max-heap, so up is negative for higher priority
         let dirfactor = match dir { Dir::Up => -1, Dir::Down => 1 };
 
@@ -87,7 +125,8 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
             (Dir::Down, Shape::Switch(_sd,Dir::Up)) => vec![port_edge[&(n,Port::Trunk)]],
              _ => panic!(),
         };
-                let mut over_edges = HashSet::new();
+
+        let mut over_edges = HashSet::new();
         let mut over_nodes = vec![edge_node(top_edge(n))].into_iter().collect::<HashSet<usize>>();
         let mut over_queue :BinaryHeap<(isize,usize)> = BinaryHeap::new();
         over_queue.push((dirfactor*edge_node(top_edge(n)) as isize, top_edge(n)));
@@ -108,14 +147,14 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
                 (Some((over_priority,_)), Some((under_priority,_))) => {
                     if over_priority > under_priority {
                         let (_,edge) = over_queue.pop().unwrap();
-                        over_edges.insert(edge);
+                        if !over_edges.insert(edge) { return Err(format!("Cyclic infrastructure")); }
                         for edge_i in next_edges(edge_node(edge)) {
                             over_nodes.insert(edge_node(edge_i));
                             over_queue.push((dirfactor*edge_node(edge_i) as isize, edge_i));
                         }
                     } else {
                         let (_,edge) = under_queue.pop().unwrap();
-                        under_edges.insert(edge);
+                        if !under_edges.insert(edge) { return Err(format!("Cyclic infrastructure")); }
                         for edge_i in next_edges(edge_node(edge)) {
                             under_nodes.insert(edge_node(edge_i));
                             under_queue.push((dirfactor*edge_node(edge_i) as isize, edge_i));
@@ -130,14 +169,14 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
         over_edges.extend(over_queue.into_iter().map(|(_,e)| e));
         under_edges.extend(under_queue.into_iter().map(|(_,e)| e));
 
-        (over_edges.into_iter().collect::<Vec<_>>(),
-         under_edges.into_iter().collect::<Vec<_>>())
+        Ok((over_edges.into_iter().collect::<Vec<_>>(),
+         under_edges.into_iter().collect::<Vec<_>>()))
     };
 
     for (i,n) in nodes.iter().enumerate() {
         match &n.shape {
             Shape::Switch(_side,dir) => {
-                let (l,r) = lr(i,*dir);
+                let (l,r) = lr(i,*dir)?;
                 for e_l in &l {
                     for e_r in &r {
                         lt.insert((*e_r,*e_l));
@@ -148,7 +187,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> HashSet<EdgePair> {
         }
     }
 
-    lt
+    Ok(lt)
 }
 
 pub fn transitive_closure<T: Eq+Hash+Copy+Clone>(set :&HashSet<(T,T)>) -> HashSet<(T,T)> {
