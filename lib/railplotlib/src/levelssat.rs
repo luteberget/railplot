@@ -5,7 +5,7 @@ use diffsolver::minisat::Bool;
 use diffsolver::minisat::unary::*;
 use ordered_float::OrderedFloat;
 use log::{info,debug,trace,warn};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct Edge {
@@ -389,7 +389,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
             Goal::LocalY  => { goal_local_ydiff(&mut s, edges, &edges_lt, &edge_ys)?; },
             Goal::LocalX  => { goal_local_xdiffs(&mut s, &node_delta_xs, &nodes)?; },
             Goal::Width  => { goal_width(&mut s, &node_delta_xs)?; },
-            Goal::Height => { goal_height(&mut s, &edge_ys)?; },
+            Goal::Height => { goal_height(&mut s, &edge_ys, &edges_lt)?; },
             Goal::Diagonals => { goal_diagonals(&mut s, &edge_shapes)?; },
             Goal::Nodeshapes => { goal_nodeshapes(&mut s, &slanted)?; },
             Goal::Shortedges => { goal_shortedges(&mut s, &edge_short)?; },
@@ -736,65 +736,38 @@ fn goal_bends(s :&mut SATModDiff<isize>, edge_shapes :&[(PortShape,PortShape)]) 
 }
 
 
-fn goal_height(s :&mut SATModDiff<isize>, edge_ys :&[DVar]) -> Result<(), String> {
-    let zero = s.diff.zero();
+fn goal_height(s :&mut SATModDiff<isize>, edge_ys :&[DVar], edges_lt :&[EdgePair]) -> Result<(), String> {
 
-    // get y values
-    let get_maxy = |model:&SATDiffModel<isize>| {
-        let mut y_max = -100_000isize;
-        for yvar in edge_ys {
-            let y = model.diff.get_value(*yvar);
-            if y > y_max { y_max = y; }
-        }
-
-        let mut y_max_vars = Vec::new();
-        for yvar in edge_ys {
-            if model.diff.get_value(*yvar) >= y_max {
-                y_max_vars.push(*yvar);
-            }
-        }
-
-        debug!("(^) fits inside y={}", y_max);
-        (y_max,y_max_vars)
-    };
-
-    let (mut y_max,mut y_max_vars) = {
-        let model = s.solve().map_err(|_| format!("Solve failed"))?;
-        get_maxy(&model)
-    };
-
-    loop {
-        let assumptions = {
-            let mut assumptions = Vec::new();
-            for v in &y_max_vars {
-                let c1 = s.cond_constraint(*v, zero, y_max-1);
-                assumptions.push(c1);
-            }
-            assumptions };
-
-        match s.solve_under_assumptions(&assumptions) {
-            Ok(model) => {
-                y_max = y_max - 1;
-                y_max_vars = Vec::new();
-                for yvar in edge_ys {
-                    if model.diff.get_value(*yvar) >= y_max {
-                        y_max_vars.push(*yvar);
-                    }
-                }
-                debug!("(^) Updated y_max to {} ({:?})", y_max, y_max_vars);
-            },
-            Err(()) => {
-                debug!("(^) could not compress Y<{}.",y_max);
-                break;
-            }
-        }
-    };
-
-    for y in edge_ys {
-        let c = s.cond_constraint(*y, zero, y_max);
-        s.sat.add_clause(vec![c]);
+    // find a set of highest edges, and minimize their maximum
+    let mut highest_edges : HashSet<usize> = (0.. edge_ys.len()).collect();
+    for (a,_b) in edges_lt { highest_edges.remove(a); }
+    let height = s.diff.named_var(Some(format!("max_y")));
+    for e in highest_edges.iter() {
+        let lit = s.cond_constraint(edge_ys[*e], height, 0);
+        s.sat.add_clause(vec![lit]);
     }
-    s.solve().map_err(|_| format!("Could not compress in Y direction"))?;
+
+    optimize_and_commit_dvar("max_y", s, height)
+}
+
+fn optimize_and_commit_dvar(name :&str, s :&mut SATModDiff<isize>, x :DVar) -> Result<(), String> {
+    let zero = s.diff.zero();
+    debug!("(^) Optimizing {}", name);
+    let m = s.solve().map_err(|_| format!("Solve failed"))?;
+    let (mut lo, mut hi) = (0, m.diff.get_value(x));
+    while lo < hi {
+        let mid = (hi-lo)/2 + lo;
+        debug!("Constraint on {}={}", name, mid);
+        let cond = s.cond_constraint(x, zero, mid);
+        match s.solve_under_assumptions(&vec![cond]) {
+            Ok(_) => { debug!("(^) successful {} <= {}", name, mid); hi = mid; }
+            Err(_) => { debug!("(^) unsuccessful {} <= {}", name, mid); lo = mid+1; }
+        }
+    }
+    assert_eq!(lo,hi);
+    let c = s.cond_constraint(x, zero, lo);
+    s.sat.add_clause(vec![c]);
+    s.solve().map_err(|_| format!("Could not compress {} to {}",name, lo))?;
     Ok(())
 }
 
