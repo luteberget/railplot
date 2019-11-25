@@ -23,7 +23,7 @@ pub enum Port { In=0, Out=1, Left=2, Right=3, Trunk=4 }
 
 #[derive(Debug, Copy, Clone)]
 #[allow(dead_code)]
-pub enum Shape { Begin, End, Switch(Side, Dir) }
+pub enum Shape { Begin, End, Switch(Side, Dir), Continuation }
 
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -51,5 +51,6 @@ pub struct Symbol {
 pub struct SchematicGraph<Obj> {
     pub nodes :Vec<Node>,
     pub edges :Vec<Edge<Obj>>,
+    pub main_tracks_edges: Vec<usize>,
 }
 

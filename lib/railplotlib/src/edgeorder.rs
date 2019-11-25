@@ -123,6 +123,9 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,Str
             (Dir::Down, Shape::Switch(_sd,Dir::Down)) => 
                 vec![port_edge[&(n,Port::Left)], port_edge[&(n,Port::Right)]],
             (Dir::Down, Shape::Switch(_sd,Dir::Up)) => vec![port_edge[&(n,Port::Trunk)]],
+
+            (Dir::Up, Shape::Continuation) => vec![port_edge[&(n,Port::Out)]],
+            (Dir::Down, Shape::Continuation) => vec![port_edge[&(n,Port::In)]],
              _ => panic!(),
         };
 
@@ -147,14 +150,14 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,Str
                 (Some((over_priority,_)), Some((under_priority,_))) => {
                     if over_priority > under_priority {
                         let (_,edge) = over_queue.pop().unwrap();
-                        if !over_edges.insert(edge) { return Err(format!("Cyclic infrastructure")); }
+                        if !over_edges.insert(edge) { continue; }
                         for edge_i in next_edges(edge_node(edge)) {
                             over_nodes.insert(edge_node(edge_i));
                             over_queue.push((dirfactor*edge_node(edge_i) as isize, edge_i));
                         }
                     } else {
                         let (_,edge) = under_queue.pop().unwrap();
-                        if !under_edges.insert(edge) { return Err(format!("Cyclic infrastructure")); }
+                        if !under_edges.insert(edge) { continue; }
                         for edge_i in next_edges(edge_node(edge)) {
                             under_nodes.insert(edge_node(edge_i));
                             under_queue.push((dirfactor*edge_node(edge_i) as isize, edge_i));

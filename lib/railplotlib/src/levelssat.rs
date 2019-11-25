@@ -3,6 +3,7 @@ use crate::solvers::Goal;
 use diffsolver::*;
 use diffsolver::minisat::Bool;
 use diffsolver::minisat::unary::*;
+use diffsolver::minisat::symbolic::*;
 use ordered_float::OrderedFloat;
 use log::{info,debug,trace,warn};
 use std::collections::{HashMap, HashSet};
@@ -43,7 +44,7 @@ pub fn idx_between<T>(slice :&[T], r :Result<usize,usize>) -> (usize,usize) {
     (r,r+1)
 }
 
-pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair], goals :&[Goal], nodes_distinct: bool) -> Result<Output, String> {
+pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges_lt :&[EdgePair], main_tracks :&[EdgeRef], goals :&[Goal], nodes_distinct: bool) -> Result<Output, String> {
     info!("Solving node/edge/symbols model using Levels/SAT method.");
 
     if nodes.len() == 0 { return Err(format!("No nodes specified.")); }
@@ -70,6 +71,10 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         .map(|x| if let Shape::Switch(_,_) = x.shape { s.sat.new_lit() }
              else { Bool::Const(false) } )
         .collect::<Vec<_>>();
+    let continuations = nodes.iter()
+        .map(|x| if let Shape::Continuation = x.shape { 
+            Some(Symbolic::new(&mut s.sat, vec![EdgeDir::Down, EdgeDir::Straight, EdgeDir::Up]))
+        } else { None }).collect::<Vec<_>>();
 
 
     trace!("($) adding constraints");
@@ -95,9 +100,9 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
         trace!("edge {:?}", e);
         let (short_up, short_down) = edge_short[i];
         let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[e.a.node].shape,
-                                    e.a.port, slanted[e.a.node]);
+                                    e.a.port, slanted[e.a.node], &continuations[e.a.node]);
         let e_end  = mk_port_shape(EdgeSide::End, &nodes[e.b.node].shape,
-                                   e.b.port, slanted[e.b.node]);
+                                   e.b.port, slanted[e.b.node], &continuations[e.b.node]);
 
         // Short up/down requires both edge side in same slant
         s.sat.add_clause(vec![!short_up, e_begin.up]);
@@ -233,7 +238,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
                         -(2 + bound)*symbol_factor);
 
                     let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[hi.a.node].shape, 
-                                                hi.a.port, slanted[hi.a.node]);
+                                                hi.a.port, slanted[hi.a.node], &continuations[hi.a.node]);
 
                     s.sat.add_clause(vec![short_up_hi, !e_begin.up, dyc, dxc]);
                 }
@@ -263,7 +268,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
                         -(2 + bound)*symbol_factor);
 
                     let e_end = mk_port_shape(EdgeSide::End, &nodes[hi.b.node].shape, 
-                                              hi.b.port, slanted[hi.b.node]);
+                                              hi.b.port, slanted[hi.b.node], &continuations[hi.b.node]);
 
                     s.sat.add_clause(vec![short_down_hi, !e_end.down, dyc, dxc]);
                 }
@@ -291,7 +296,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
                         -(2 + bound)*symbol_factor);
 
                     let e_begin = mk_port_shape(EdgeSide::Begin, &nodes[lo.a.node].shape, 
-                                                lo.a.port, slanted[lo.a.node]);
+                                                lo.a.port, slanted[lo.a.node], &continuations[lo.a.node]);
 
                     s.sat.add_clause(vec![short_down_lo, !e_begin.down, dyc, dxc]);
                 }
@@ -319,7 +324,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
                         -(2 + bound)*symbol_factor);
 
                     let e_end = mk_port_shape(EdgeSide::End, &nodes[lo.b.node].shape, 
-                                                lo.b.port, slanted[lo.b.node]);
+                                                lo.b.port, slanted[lo.b.node], &continuations[lo.b.node]);
 
                     s.sat.add_clause(vec![short_up_lo, !e_end.up, dyc, dxc]);
                 }
@@ -393,6 +398,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
             Goal::Diagonals => { goal_diagonals(&mut s, &edge_shapes)?; },
             Goal::Nodeshapes => { goal_nodeshapes(&mut s, &slanted)?; },
             Goal::Shortedges => { goal_shortedges(&mut s, &edge_short)?; },
+            Goal::MainTrackHeight => { goal_maintrackheight(&mut s, &edge_ys, &edges_lt, &main_tracks)?; }
             //_ => unimplemented!(), --- unreachable pattern for now, activate if new
             //  criteria are added.
         }
@@ -502,6 +508,13 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
 
     goal_symbol_width(&mut s, symbol_node_xs[0], symbol_node_xs[symbol_node_xs.len()-1], symbol_factor)?;
 
+    let (node_x_values,symbol_x_values) = {
+        let m = s.solve().map_err(|_| format!("Unable to solve."))?;
+        let nx = symbol_node_xs.iter().map(|v| m.diff.get_value(*v)).collect::<Vec<_>>();
+        let sx = symbol_xs.iter().map(|v| m.diff.get_value(*v)).collect::<Vec<_>>();
+        (nx,sx)
+    };
+
     let x_min = *node_x_values.iter().min().unwrap();
     let node_x_values :Vec<isize> = node_x_values.into_iter().map(|x| x - x_min).collect();
     let symbol_x_values :Vec<isize> = symbol_x_values.into_iter().map(|x| x - x_min).collect();
@@ -531,7 +544,7 @@ fn portsh(up :Bool, straight :Bool, down :Bool) -> PortShape {
 #[derive(Debug,Copy,Clone)]
 pub enum EdgeSide { Begin, End }
 
-fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool) -> PortShape {
+fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool, cont :&Option<Symbolic<EdgeDir>>) -> PortShape {
 
     use self::EdgeSide as ES;
     use self::Shape as N;
@@ -557,6 +570,15 @@ fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool) -> PortShap
         (ES::End,   N::Switch(S::Right,D::Down), P::Right) => portsh(ff,  s, !s),
         (ES::End,   N::Switch(S::Left, D::Up  ),   P::Trunk) => portsh(ff, !s,  s),
         (ES::End,   N::Switch(S::Right,D::Up  ),   P::Trunk) => portsh( s, !s, ff),
+
+        (ES::Begin, N::Continuation, P::Out) => {
+            let cont = cont.as_ref().unwrap();
+            portsh(cont.has_value(&EdgeDir::Up), cont.has_value(&EdgeDir::Straight), cont.has_value(&EdgeDir::Down))
+        },
+        (ES::End, N::Continuation, P::In) => {
+            let cont = cont.as_ref().unwrap();
+            portsh(cont.has_value(&EdgeDir::Up), cont.has_value(&EdgeDir::Straight), cont.has_value(&EdgeDir::Down))
+        },
 
         _ =>  panic!("Invalid edge shape {:?}",(side,shape,port)),
     }
@@ -685,21 +707,22 @@ fn goal_local_ydiff(s :&mut SATModDiff<isize>, edges :&[Edge], edges_lt :&[EdgeP
 fn goal_symbol_width(s :&mut SATModDiff<isize>, xi: DVar, xf :DVar, symbol_factor :isize) -> Result<(), String> {
     let mut bound = {
         let m = s.solve().map_err(|_| format!("Could not solve."))?;
-        m.diff.get_value(xf) - m.diff.get_value(xi)
+        let d = m.diff.get_value(xf) - m.diff.get_value(xi);
+        ((d-1)/symbol_factor) + 1
     };
 
 
     loop {
-        let c1 = s.cond_constraint(xf, xi, bound - symbol_factor);
+        let c1 = s.cond_constraint(xf, xi, symbol_factor*(bound - 1));
         if s.solve_under_assumptions(&vec![c1]).is_ok() {
-            bound -= symbol_factor;
-            debug!("(^) Updated sx to {}", bound);
+            bound -= 1;
+            debug!("(^) Updated sx to {}", symbol_factor*bound);
         } else {
-            debug!("(^) could not compress sx<{}.", bound);
+            debug!("(^) could not compress sx<{}.", symbol_factor*bound);
             break;
         }
 
-        let c = s.cond_constraint(xf, xi, bound);
+        let c = s.cond_constraint(xf, xi, symbol_factor*bound);
         s.sat.add_clause(vec![c]);
     }
 
@@ -747,26 +770,61 @@ fn goal_height(s :&mut SATModDiff<isize>, edge_ys :&[DVar], edges_lt :&[EdgePair
         s.sat.add_clause(vec![lit]);
     }
 
-    optimize_and_commit_dvar("max_y", s, height)
+    let zero = s.diff.zero();
+    optimize_and_commit_dvar("max_y", s, zero, height)
 }
 
-fn optimize_and_commit_dvar(name :&str, s :&mut SATModDiff<isize>, x :DVar) -> Result<(), String> {
-    let zero = s.diff.zero();
+fn goal_maintrackheight(s :&mut SATModDiff<isize>, edge_ys :&[DVar], edges_lt :&[EdgePair], maintracks :&[EdgeRef]) -> Result<(), String> {
+    debug!("Minimizing delta Y for main tracks edge set: {:?}", maintracks);
+    println!("Minimizing delta Y for main tracks edge set: {:?}", maintracks);
+
+    // find a set of highest edges, and minimize their maximum
+    let mut highest_edges : HashSet<usize> = maintracks.iter().cloned().collect();
+    let mut lowest_edges  : HashSet<usize> = maintracks.iter().cloned().collect();
+    for (a,b) in edges_lt.iter().filter(|(a,b)| maintracks.contains(a) && maintracks.contains(b)) { 
+        highest_edges.remove(a);
+        lowest_edges.remove(b);
+    }
+
+    let main_low = s.diff.named_var(Some(format!("maintracks_low")));
+    for e in lowest_edges.iter() {
+        // main_low - e <= 0
+        // main_low <= e
+        let lit = s.cond_constraint(main_low, edge_ys[*e], 0);
+        s.sat.add_clause(vec![lit]);
+    }
+    let main_high = s.diff.named_var(Some(format!("maintracks_high")));
+    for e in highest_edges.iter() {
+        // e - high <= 0
+        // e <= high
+        let lit = s.cond_constraint(edge_ys[*e], main_high, 0);
+        s.sat.add_clause(vec![lit]);
+    }
+
+    let x = optimize_and_commit_dvar("maintracks", s, main_low, main_high);
+    let m = s.solve().map_err(|_| format!("Could not compress"))?;
+    let (a, b) = (m.diff.get_value(main_low), m.diff.get_value(main_high));
+    println!("Maintrack done {} - {}",a,b);
+    x
+}
+
+fn optimize_and_commit_dvar(name :&str, s :&mut SATModDiff<isize>, low_x :DVar, high_x :DVar) -> Result<(), String> {
     debug!("(^) Optimizing {}", name);
     let m = s.solve().map_err(|_| format!("Solve failed"))?;
-    let (mut lo, mut hi) = (0, m.diff.get_value(x));
+    let (mut lo, mut hi) = (0, m.diff.get_value(high_x) - m.diff.get_value(low_x));
     while lo < hi {
         let mid = (hi-lo)/2 + lo;
         debug!("Constraint on {}={}", name, mid);
-        let cond = s.cond_constraint(x, zero, mid);
+        let cond = s.cond_constraint(high_x, low_x, mid);
         match s.solve_under_assumptions(&vec![cond]) {
             Ok(_) => { debug!("(^) successful {} <= {}", name, mid); hi = mid; }
             Err(_) => { debug!("(^) unsuccessful {} <= {}", name, mid); lo = mid+1; }
         }
     }
     assert_eq!(lo,hi);
-    let c = s.cond_constraint(x, zero, lo);
+    let c = s.cond_constraint(high_x, low_x, lo);
     s.sat.add_clause(vec![c]);
+    debug!("(^) Committing {}={}", name,lo);
     s.solve().map_err(|_| format!("Could not compress {} to {}",name, lo))?;
     Ok(())
 }
@@ -844,6 +902,7 @@ fn symbol_edgeclass_constraints(nodes :&[Node], edges :&[Edge], symbols :&[(Edge
                 end(edge_ports[&(i,Port::In)], -1, 0.0, 1);
                 end(edge_ports[&(i,Port::In)], -1, 0.0, -1);
             },
+            _ => { continue; } // TODO continuations
             //_ => panic!("Unsupported shape"),
         }
     }

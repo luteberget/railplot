@@ -14,5 +14,5 @@ winapi = {version = "0.3", features = ["debugapi"] }
 diffsolver = { path = "../diffsolver" }
 disjoint-sets = "0.4"
 ordered-float = "1.0"
-log = "0.4"
+log = { version = "0.4", features = ["release_max_level_info"] }
 permutation = "0.2"

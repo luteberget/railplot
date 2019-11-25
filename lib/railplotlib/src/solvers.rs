@@ -7,7 +7,15 @@ use log::{info,debug,trace};
 
 #[allow(unused)]
 pub enum Goal {
-    Width,Height,Bends,Diagonals,Nodeshapes,Shortedges,LocalY,LocalX
+    Width = 0,
+    Height = 1,
+    Bends = 2,
+    Diagonals = 3,
+    Nodeshapes = 4,
+    Shortedges = 5,
+    LocalY = 6,
+    LocalX = 7,
+    MainTrackHeight = 8,
 }
 
 type Pt = (f64,f64);
@@ -73,10 +81,12 @@ impl SchematicSolver for LevelsSatSolver {
         edgeorder::fix_edgeorder_ambiguities(&model.nodes, &edges2, &mut edges_lt);
         let edges_lt : Vec<(usize,usize)> = edges_lt.into_iter().collect();
 
+        let main_tracks = model.main_tracks_edges.iter().map(|x| edges_sort.apply_idx(*x)).collect::<Vec<_>>();
+
         let nodes = model.nodes.iter().map(|n| levelssat::Node { shape: n.shape.clone(),
          pos: n.pos }).collect::<Vec<_>>();
         let levelssat::Output { node_coords, edge_levels, symbol_xs } = 
-            levelssat::solve(&nodes, &edges, &symbols, &edges_lt, &self.criteria, self.nodes_distinct)?;
+            levelssat::solve(&nodes, &edges, &symbols, &edges_lt, &main_tracks, &self.criteria, self.nodes_distinct)?;
 
         debug!("result node coodinates  {:?}", node_coords);
         debug!("result edge levels {:?}", edge_levels);

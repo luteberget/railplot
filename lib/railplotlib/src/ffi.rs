@@ -38,20 +38,23 @@ pub extern "system" fn railplot_enable_logging() {
 pub extern "system" fn railplot_new() -> *mut FFISolver {
     Box::into_raw(Box::new(FFISolver {
         solver :Some(LevelsSatSolver { 
-            criteria: vec![
-                Goal::Bends,
-                Goal::Width,
-                Goal::Height,
-            ],
+            criteria: Vec::new(),
             nodes_distinct: false
         }),
         graph: Some(SchematicGraph {
             nodes: Vec::new(),
             edges: Vec::new(),
+            main_tracks_edges :Vec::new(),
         }),
         solution: None,
         error_message: None,
     }))
+}
+
+#[no_mangle]
+pub extern "system" fn railplot_addoptimization(s :*mut FFISolver, goal :Goal) {
+    let solver = unsafe { &mut *s }.solver.as_mut().unwrap();
+    solver.criteria.push(goal);
 }
 
 #[no_mangle]
