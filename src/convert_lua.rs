@@ -94,6 +94,7 @@ pub fn schematic_graph_from_lua<'l>(schematic :&rlua::Table<'l>) -> Result<Schem
     let mut model = SchematicGraph {
         nodes: Vec::new(),
         edges: Vec::new(),
+        main_tracks_edges: Vec::new(),
     };
 
     let ns = schematic.get::<_,rlua::Table>("nodes")?;

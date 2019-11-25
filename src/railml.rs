@@ -15,6 +15,7 @@ pub fn branching_to_schematic_graph<Obj>(model :BranchingModel<Obj>) -> Result<S
     let mut model = SchematicGraph {
         nodes: Vec::new(),
         edges: Vec::new(),
+        main_tracks_edges: Vec::new(),
     };
 
     let mut named_connections = HashMap::new();
