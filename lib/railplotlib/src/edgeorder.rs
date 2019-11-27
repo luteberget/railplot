@@ -9,6 +9,8 @@ type EdgePair = (EdgeRef,EdgeRef);
 type NodePort = (NodeRef, Port);
 type Edge = (NodePort,NodePort);
 
+/// Find pairs of edges which overlap in mileage but are not ordered by the given order relation
+/// and add tuples to the relation until no more such pairs can be found.
 pub fn fix_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order :&mut HashSet<EdgePair>) {
     while let Err((a,b)) = find_edgeorder_ambiguities(nodes, edges, partial_order) {
         warn!("  *inserting ({},{})", b,a);
@@ -16,6 +18,7 @@ pub fn fix_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order :
     }
 }
 
+/// Find pairs of edges which overlap in mileage but are not ordered by the given order relation.
 pub fn find_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order :&HashSet<EdgePair>) -> Result<(), EdgePair> {
     let partial_order = transitive_closure(partial_order);
     let mut edges = edges.iter().enumerate().collect::<Vec<_>>();
@@ -47,44 +50,8 @@ pub fn find_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order 
     Ok(())
 }
 
-#[test]
-pub fn edgeorder_termination_issue() {
-    println!("Edge order termiation issue test");
-    
-    let nodes = vec![
-        Node {
-            name: format!("start"),
-            pos: 0.0,
-            shape: Shape::Begin,
-        },
-        Node {
-            name: format!("a"),
-            pos: 1.0,
-            shape: Shape::Switch(Side::Right, Dir::Down),
-        },
-        Node {
-            name: format!("b"),
-            pos: 2.0,
-            shape: Shape::Switch(Side::Left, Dir::Up),
-        },
-        Node {
-            name: format!("start"),
-            pos: 3.0,
-            shape: Shape::End,
-        },
-    ];
-
-    let edges = vec![
-        ((1,Port::Right),(2,Port::Left)),
-        ((2,Port::Right),(1,Port::Left)),
-        ((0,Port::Out),  (1,Port::Trunk)),
-        ((2,Port::Trunk), (3,Port::In)),
-    ];
-
-    let result = edgeorder(&nodes, &edges);
-    assert!(result.is_err());
-}
-
+/// Compute the vertical edge order relation.
+/// See Sec. 6.2.1 (p. 148).
 pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,String> {
     trace!("computing edge order");
     let mut lt :HashSet<EdgePair> = HashSet::new();
@@ -193,6 +160,8 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,Str
     Ok(lt)
 }
 
+/// Compute transitive closure of binary relation in-place.
+/// I.e. add tuples (a,c) when there exists (a,b) and (b,c).
 pub fn transitive_closure<T: Eq+Hash+Copy+Clone>(set :&HashSet<(T,T)>) -> HashSet<(T,T)> {
     let mut result :HashMap<T, HashSet<T>> = HashMap::new();
     for (a,b) in set { result.entry(*a).or_insert(HashSet::new()).insert(*b); }
@@ -227,6 +196,8 @@ pub fn transitive_closure<T: Eq+Hash+Copy+Clone>(set :&HashSet<(T,T)>) -> HashSe
     result.into_iter().flat_map(|(a,s)| s.into_iter().map(move |b| (a,b))).collect()
 }
 
+/// Compute transitive reduction of binary relation in-place.
+/// I.e. remove tuples (a,c) when there exists (a,b) and (b,c).
 pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
     debug!("Computing transitive reduction");
     let map = {
@@ -252,3 +223,97 @@ pub fn transitive_reduction<T: Eq+Hash+Copy+Clone>(set :&mut HashSet<(T,T)>) {
 }
 
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_transitive_reduction() {
+        let mut edges :HashSet<(usize,usize)> = vec![(1,2),(2,3),(1,3)].into_iter().collect();
+        transitive_reduction(&mut edges);
+        assert!(edges == vec![(1,2),(2,3)].into_iter().collect());
+    }
+
+    #[test]
+    fn test_transitive_closure() {
+        let edges :HashSet<(usize,usize)> = vec![(1,2),(2,3)].into_iter().collect();
+        let edges = transitive_closure(&edges);
+        assert_eq!(edges, vec![(1,2),(2,3),(1,3)].into_iter().collect());
+    }
+
+    #[test]
+    pub fn edgeorder_termination_issue() {
+        println!("Edge order termiation issue test");
+        
+        let nodes = vec![
+            Node {
+                name: format!("start"),
+                pos: 0.0,
+                shape: Shape::Begin,
+            },
+            Node {
+                name: format!("a"),
+                pos: 1.0,
+                shape: Shape::Switch(Side::Right, Dir::Down),
+            },
+            Node {
+                name: format!("b"),
+                pos: 2.0,
+                shape: Shape::Switch(Side::Left, Dir::Up),
+            },
+            Node {
+                name: format!("start"),
+                pos: 3.0,
+                shape: Shape::End,
+            },
+        ];
+
+        let edges = vec![
+            ((1,Port::Right),(2,Port::Left)),
+            ((2,Port::Right),(1,Port::Left)),
+            ((0,Port::Out),  (1,Port::Trunk)),
+            ((2,Port::Trunk), (3,Port::In)),
+        ];
+
+        let result = edgeorder(&nodes, &edges);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    pub fn test_edge_order_ambiguity() {
+        // The edge order relation may not be completely determined from 
+        // the track topology only. For example, the "clothes iron" example:
+        //       /-----
+        //      /   -----\
+        // ----/----------\-----------
+        // The function find_edgeorder_ambiguities detects these.
+
+        let nodes = vec![
+            Node { name: format!("t1start"), pos: 0.0, shape: Shape::Begin },
+            Node { name: format!("sw1"), pos: 100.0, shape: Shape::Switch(Side::Left, Dir::Up) },
+            Node { name: format!("t3end"), pos: 200.0, shape: Shape::Begin },
+            Node { name: format!("t2end"), pos: 300.0, shape: Shape::End },
+            Node { name: format!("sw2"), pos: 400.0, shape: Shape::Switch(Side::Right, Dir::Down) },
+            Node { name: format!("tlend"), pos: 500.0, shape: Shape::End },
+        ];
+
+        let edges = vec![
+            /* 0. */ ((0, Port::Out), (1, Port::Trunk)),
+            /* 1. */ ((1, Port::Left), (3, Port::In)),
+            /* 2. */ ((1, Port::Right), (4, Port::Left)),
+            /* 3. */ ((2, Port::Out), (4, Port::Right)),
+            /* 4. */ ((4, Port::Trunk), (5, Port::In)),
+        ];
+
+        let edge_order = edgeorder(&nodes, &edges).unwrap();
+        let result = find_edgeorder_ambiguities(&nodes, &edges, &edge_order);
+        println!("result {:?}", result);
+        assert!(result == Err((1,3)) || result == Err((3,1)));
+
+        let mut edge_order = edge_order;
+        fix_edgeorder_ambiguities(&nodes, &edges, &mut edge_order);
+        assert!(edge_order.contains(&(1,3)) || edge_order.contains(&(3,1)));
+
+    }
+}
