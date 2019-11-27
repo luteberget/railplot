@@ -1,3 +1,9 @@
+//! Solvers for the linear schematic railway drawing problem.
+//!
+//! For now, this module contains only one algorithm, LevelsSat,
+//! but could offer alternatives in the future.
+//!
+
 use crate::model::*;
 use std::collections::HashMap;
 use ordered_float::OrderedFloat;
@@ -6,32 +12,41 @@ use crate::edgeorder;
 use log::{info,debug,trace};
 
 #[allow(unused)]
+/// Optimization goals.
 pub enum Goal {
+    /// Minimize the total width of the drawing (in drawing units).
     Width = 0,
+    /// Minimize the total height of the drawing (in drawing units).
     Height = 1,
+    /// Minimize the number of bends.
     Bends = 2,
+    /// Minimize the number of diagonal edges.
     Diagonals = 3,
+    /// Minimize number of diagonal edges.
     Nodeshapes = 4,
+    /// Maximize number of short edges.
     Shortedges = 5,
+    /// Minimize distance between edges that are vertical neighbors.
     LocalY = 6,
+    /// Minimize distance between nodes that are horizontal neighbors.
     LocalX = 7,
+    /// Minimize distance between edges that are specificed as main tracks (see `SchematicGraph`
+    /// struct).
     MainTrackHeight = 8,
 }
 
-type Pt = (f64,f64);
 
+/// Algorithm for automatic drawing of schematic railway plans.
 pub trait SchematicSolver {
     fn solve<Obj:Clone>(self, model :SchematicGraph<Obj>) -> Result<SchematicOutput<Obj>, String>;
 }
 
-pub struct SchematicOutput<Obj> {
-    pub nodes :Vec<(Node, Pt)>, // node coords
-    pub lines :Vec<(Edge<Obj>,Vec<Pt>)>, // edge lines
-    pub symbols :Vec<(Obj,(Pt,Pt))>, // origin pt and rotation
-}
 
-
+/// Solve the linear schematic railway drawing problem using
+/// the Levels/SAT method described in Ch. 6 of Bjørnar Luteberget's thesis.
 pub struct LevelsSatSolver{
+    /// Ordered list of optimization criteria, each critieron is applied
+    /// lexicographically in the given order.
     pub criteria: Vec<Goal>,
 
     /// Set to true to force each node to be at a different x coordinate.

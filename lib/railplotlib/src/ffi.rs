@@ -1,8 +1,148 @@
+//! Native library compatible interface. Used in native DLL for RailCOMPLETE.
+//!
+//! C# example:
+//!
+//! ```csharp
+//! public class SchematicSolver
+//!    {
+//!       public enum Dir { Up = 0, Down = 1 };
+//!       public enum Side { Left = 0, Right = 1 };
+//!       public enum Goal
+//!       {
+//!           Width = 0,
+//!           Height = 1,
+//!           Bends = 2,
+//!           Diagonals = 3,
+//!           Nodeshapes = 4,
+//!           Shortedges = 5,
+//!           LocalY = 6,
+//!           LocalX = 7,
+//!       }
+//! 
+//!       public enum Port { In = 0, Out = 1, Left = 2, Right = 3, Trunk = 4, ContA = 5, ContB = 6, };
+//! 
+//!       [DllImport("railplotlib.dll")]
+//!       static extern IntPtr railplot_new();
+//!       [DllImport("railplotlib.dll")]
+//!       static extern void railplot_enable_logging();
+//!       [DllImport("railplotlib.dll")]
+//!       static extern void railplot_destroy(IntPtr p);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern void railplot_addoptimization(IntPtr p, Goal goal);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_addendnode(IntPtr p, double pos, Dir dir);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_addswitchnode(IntPtr p, double pos, Side side, Dir dir);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_addedge(IntPtr p, uint a_node, Port a_port, uint b_node, Port b_port);
+//! 
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_num_nodes(IntPtr p);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_num_edges(IntPtr p);
+//! 
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_solve(IntPtr p);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_has_solution(IntPtr p);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern double railplot_solution_node_x(IntPtr p, uint node);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern double railplot_solution_node_y(IntPtr p, uint node);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern uint railplot_solution_edge_num_vertices(IntPtr p, uint edge);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern double railplot_solution_edge_vertex_x(IntPtr p, uint edge, uint vertex);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern double railplot_solution_edge_vertex_y(IntPtr p, uint edge, uint vertex);
+//!       [DllImport("railplotlib.dll")]
+//!       static extern unsafe byte* railplot_get_error_message(IntPtr p);
+//! 
+//!       IntPtr ptr;
+//!       public SchematicSolver()
+//!       {
+//!           railplot_enable_logging();
+//!           ptr = railplot_new();
+//!       }
+//! 
+//!       ~SchematicSolver()
+//!       {
+//!           railplot_destroy(ptr);
+//!           ptr = IntPtr.Zero;
+//!       }
+//! 
+//!       public uint AddEndNode(double pos, Dir dir) => railplot_addendnode(ptr, pos, dir);
+//!       public uint AddSwitchNode(double pos, Side side, Dir dir) => railplot_addswitchnode(ptr, pos, side, dir);
+//!       public uint AddEdge(uint a_node, Port a_port, uint b_node, Port b_port) => railplot_addedge(ptr, a_node, a_port, b_node, b_port);
+//! 
+//!       public uint NumNodes => railplot_num_nodes(ptr);
+//!       public uint NumEdges => railplot_num_edges(ptr);
+//! 
+//!       public List<Goal> Criteria { get; set; } = new List<Goal>()
+//!       {
+//!           Goal.Bends, Goal.Height, Goal.Width, Goal.LocalX, Goal.LocalY,
+//!       };
+//! 
+//!       public bool Solve()
+//!       {
+//!           foreach (var goal in Criteria)
+//!           {
+//!               railplot_addoptimization(ptr, goal);
+//!           }
+//!           return railplot_solve(ptr) > 0;
+//!       }
+//!       public bool HasSolution => railplot_has_solution(ptr) > 0;
+//!       public string ErrorMessage
+//!       {
+//!           get
+//!           {
+//!               unsafe
+//!               {
+//!                   var p = railplot_get_error_message(ptr);
+//!                   var len = 0;
+//!                   while (p[len] != 0) len++;
+//!                   return Encoding.UTF8.GetString(p, len);
+//!               }
+//!           }
+//!       }
+//! 
+//!       public IEnumerable<Point> NodeLocations
+//!       {
+//!           get
+//!           {
+//!               if (!HasSolution) throw new System.Exception("No solution available.");
+//!               for (uint i = 0; i < NumNodes; i++)
+//!               {
+//!                   yield return new Point(
+//!                       railplot_solution_node_x(ptr, i),
+//!                       railplot_solution_node_y(ptr, i));
+//!               }
+//!           }
+//!       }
+//! 
+//!       public IEnumerable<Point> GetEdgeLine(uint edge)
+//!       {
+//!           if (!HasSolution) throw new System.Exception("No solution available.");
+//!           var num_vertices = railplot_solution_edge_num_vertices(ptr, edge);
+//!           for (uint i = 0; i < num_vertices; i++)
+//!           {
+//!               yield return new Point(
+//!                   railplot_solution_edge_vertex_x(ptr, edge, i),
+//!                   railplot_solution_edge_vertex_y(ptr, edge, i));
+//!           }
+//!       }
+//! 
+//!       public IEnumerable<IEnumerable<Point>> EdgeLines
+//!           => Enumerable.Range(0, (int)NumEdges).Select(e => GetEdgeLine((uint)e));
+//!   }
+//! ```
+
+
 use crate::model::*;
 use crate::solvers::*;
 use std::ffi::CString;
 use log::*;
-
+ 
 pub struct FFISolver {
     solver :Option<LevelsSatSolver>,
     graph :Option<SchematicGraph<()>>,
@@ -44,6 +184,7 @@ pub extern "system" fn railplot_new() -> *mut FFISolver {
         graph: Some(SchematicGraph {
             nodes: Vec::new(),
             edges: Vec::new(),
+
             main_tracks_edges :Vec::new(),
         }),
         solution: None,
