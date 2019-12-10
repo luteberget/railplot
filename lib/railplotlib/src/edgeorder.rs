@@ -131,7 +131,7 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,Str
                         }
                     }
                 }
-                _ => break
+                _asdf => break
             }
         }
 
@@ -158,6 +158,90 @@ pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,Str
     }
 
     Ok(lt)
+}
+
+/// Another try on this function. [WIP]
+/// Compute the vertical edge order relation.
+/// See Sec. 6.2.1 (p. 148).
+pub fn edgeorder2(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<EdgePair>,String> {
+
+    trace!("computing edge order");
+    let mut lt :HashSet<EdgePair> = HashSet::new();
+    for (i,n) in nodes.iter().enumerate() {
+        match &n.shape {
+            Shape::Switch(_side,dir) => {
+                let (under,over) = edgeorder_switch(nodes, edges, i,*dir)?;
+                for e_under in &under {
+                    for e_over in &over {
+                        // Less-than relation:   e_under < e_over.
+                        lt.insert((*e_under,*e_over));
+                    }
+                }
+            },
+            _ => {},
+        }
+    }
+
+    Ok(lt)
+}
+
+fn edgeorder_switch(nodes :&[Node], edges :&[Edge], node_idx :NodeRef, dir :Dir) -> Result<(HashSet<EdgeRef>,HashSet<EdgeRef>), String> {
+    let over_edge  = edges.iter().position(|e| (e.0) == (node_idx, Port::Left )).unwrap();
+    let under_edge = edges.iter().position(|e| (e.0) == (node_idx, Port::Right)).unwrap();
+
+    let mut interval_size = 1;
+    let mut over_edges  : HashSet<EdgeRef> = vec![over_edge ].into_iter().collect();
+    let mut under_edges : HashSet<EdgeRef> = vec![under_edge].into_iter().collect();
+
+    loop {
+        let interval = match dir {
+            Dir::Up => (node_idx, node_idx+interval_size),
+            Dir::Down => (node_idx-interval_size, node_idx),
+        };
+
+        let over_candidates  = find_candidates(nodes, edges, &over_edges,  interval.0, interval.1);
+        let under_candidates = find_candidates(nodes, edges, &under_edges, interval.0, interval.1);
+
+        if over_candidates.intersection(&under_candidates).next().is_some() {
+            return Ok((under_edges, over_edges));
+        } else {
+            over_edges = over_candidates;
+            under_edges = under_candidates;
+            interval_size += 1;
+        }
+    }
+}
+
+fn find_candidates(nodes :&[Node], edges :&[Edge], edge_set :&HashSet<EdgeRef>, left_node :NodeRef, right_node :NodeRef) -> HashSet<EdgeRef> {
+    let mut edge_set = edge_set.clone();
+
+    loop {
+        let mut found_new = HashSet::new();
+
+        for edge in &edge_set {
+            for other_edge in connected_edges(nodes, edges, left_node, right_node, *edge) {
+                if !edge_set.contains(&other_edge) {
+                    found_new.insert(other_edge);
+                }
+            }
+        }
+
+        if found_new.is_empty() {
+            return edge_set;
+        } else {
+            edge_set.extend(found_new);
+        }
+    }
+}
+
+fn connected_edges(nodes :&[Node], edges :&[Edge], left_node :NodeRef, right_node :NodeRef, edge :EdgeRef) -> Vec<EdgeRef> {
+    let n_a = (edges[edge].0).0;
+    let n_b = (edges[edge].1).0;
+
+    let mut out = Vec::new();
+    out.extend(edges.iter().enumerate().filter(|(_,e)| (e.0).0 == n_a || (e.1).0 == n_a).map(|(i,_)| i));
+    out.extend(edges.iter().enumerate().filter(|(_,e)| (e.0).0 == n_b || (e.1).0 == n_b).map(|(i,_)| i)); 
+    out
 }
 
 /// Compute transitive closure of binary relation in-place.
