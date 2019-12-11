@@ -221,3 +221,66 @@ pub fn conv_line((x1,y1) :(f64,f64), l :f64, (x2,y2) :(f64,f64)) -> Vec<(f64,f64
 }
 
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn add_node(nodes :&mut Vec<Node>, pos :f64, shape :Shape) -> String {
+        let name = format!("n{}", nodes.len());
+        nodes.push( Node { name: name.clone(),  pos, shape });
+        name
+    }
+
+    #[test]
+    pub fn crossing_output() {
+        //
+        // b------d\-/g-----h
+        //          Xe
+        // a------c/-\f-----i
+
+        let mut nodes = vec![];
+        let a = add_node(&mut nodes, 0.0, Shape::Begin);
+        let b = add_node(&mut nodes, 1.0, Shape::Begin);
+        let c = add_node(&mut nodes, 100.0, Shape::Switch(Side::Left, Dir::Up));
+        let d = add_node(&mut nodes, 101.0, Shape::Switch(Side::Right, Dir::Up));
+        let e = add_node(&mut nodes, 150.0, Shape::Crossing);
+        let f = add_node(&mut nodes, 200.0, Shape::Switch(Side::Right, Dir::Down));
+        let g = add_node(&mut nodes, 201.0, Shape::Switch(Side::Left, Dir::Down));
+        let h = add_node(&mut nodes, 300.0, Shape::End);
+        let i = add_node(&mut nodes, 301.0, Shape::End);
+
+        let edges = vec![
+            ((a.clone(), Port::Out),     (c.clone(), Port::Trunk)),
+            ((b.clone(), Port::Out),     (d.clone(), Port::Trunk)),
+            ((c.clone(), Port::Left),    (e.clone(), Port::InLeft)),
+            ((c.clone(), Port::Right),   (f.clone(), Port::Left)),
+            ((d.clone(), Port::Right),   (e.clone(), Port::InRight)),
+            ((d.clone(), Port::Left),    (g.clone(), Port::Right)),
+            ((e.clone(), Port::OutLeft), (g.clone(), Port::Left)),
+            ((e.clone(), Port::OutRight),(f.clone(), Port::Right)),
+            ((f.clone(), Port::Trunk),   (i.clone(), Port::In)),
+            ((g.clone(), Port::Trunk),   (h.clone(), Port::In)),
+        ];
+
+        for n in &nodes { println!("node {:?}", n); }
+        for e in &edges { println!("edge {:?}", e); }
+
+        let graph :SchematicGraph<()> = SchematicGraph {
+            nodes: nodes,
+            edges: edges.into_iter().map(|(a,b)| Edge { a,b,objects:Vec::new() }).collect(),
+            main_tracks_edges: vec![],
+        };
+
+        let solver = LevelsSatSolver {
+            criteria: vec![Goal::Bends, Goal::Width, Goal::Height],
+            nodes_distinct: false 
+        };
+        let result = solver.solve(graph).unwrap();
+
+        for (_,l) in result.lines {
+            println!("line: {:?}", l);
+        }
+
+    }
+}
+

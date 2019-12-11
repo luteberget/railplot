@@ -68,7 +68,7 @@ pub fn solve(nodes :&[Node], edges :&[Edge], symbols:&[(EdgeRef,&Symbol)], edges
     let edge_short = edges.iter()
         .map(|_| (s.sat.new_lit(), s.sat.new_lit())).collect::<Vec<_>>();
     let slanted = nodes.iter()
-        .map(|x| if let Shape::Switch(_,_) = x.shape { s.sat.new_lit() }
+        .map(|x| if let Shape::Switch(_,_) | Shape::Crossing = x.shape { s.sat.new_lit() }
              else { Bool::Const(false) } )
         .collect::<Vec<_>>();
     let continuations = nodes.iter()
@@ -571,6 +571,11 @@ fn mk_port_shape(side :EdgeSide, shape :&Shape, port :Port, s :Bool, cont :&Opti
         (ES::End,   N::Switch(S::Left, D::Up  ),   P::Trunk) => portsh(ff, !s,  s),
         (ES::End,   N::Switch(S::Right,D::Up  ),   P::Trunk) => portsh( s, !s, ff),
 
+        (ES::Begin, N::Crossing, P::OutLeft) =>  portsh(!s, s, ff),
+        (ES::Begin, N::Crossing, P::OutRight) => portsh(ff, !s, s),
+        (ES::End,   N::Crossing, P::InLeft) =>  portsh(!s, s, ff),
+        (ES::End,   N::Crossing, P::InRight) => portsh(ff, !s, s),
+
         (ES::Begin, N::Continuation, P::Out) => {
             let cont = cont.as_ref().unwrap();
             portsh(cont.has_value(&EdgeDir::Up), cont.has_value(&EdgeDir::Straight), cont.has_value(&EdgeDir::Down))
@@ -902,7 +907,7 @@ fn symbol_edgeclass_constraints(nodes :&[Node], edges :&[Edge], symbols :&[(Edge
                 end(edge_ports[&(i,Port::In)], -1, 0.0, 1);
                 end(edge_ports[&(i,Port::In)], -1, 0.0, -1);
             },
-            _ => { continue; } // TODO continuations
+            _ => { continue; } // TODO continuations and crossings
             //_ => panic!("Unsupported shape"),
         }
     }

@@ -50,17 +50,18 @@ pub fn find_edgeorder_ambiguities(nodes :&[Node], edges :&[Edge], partial_order 
     Ok(())
 }
 
-fn node_ports(node :&Node) -> Vec<Port> {
-    match &node.shape {
-        Shape::Switch(_,_) => vec![Port::Trunk, Port::Left, Port::Right],
-        Shape::Crossing => vec![Port::InLeft, Port::InRight, Port::OutLeft, Port::OutRight],
-        _ => vec![],
-    }
-}
-
 /// Compute the vertical edge order relation.
 /// See Sec. 6.2.1 (p. 148).
 pub fn edgeorder(nodes :&[Node], edges :&[Edge]) -> Result<HashSet<(EdgeRef, EdgeRef)>,String> {
+
+    fn node_ports(node :&Node) -> Vec<Port> {
+        match &node.shape {
+            Shape::Switch(_,_) => vec![Port::Trunk, Port::Left, Port::Right],
+            Shape::Crossing => vec![Port::InLeft, Port::InRight, Port::OutLeft, Port::OutRight],
+            _ => vec![],
+        }
+    }
+
     let port_edge = edges.iter().enumerate().flat_map(|(i,e)| vec![(i,e.0),(i,e.1)])
         .map(|(i,(n,p))| ((n,p),i)).collect::<HashMap<_,_>>();
 
