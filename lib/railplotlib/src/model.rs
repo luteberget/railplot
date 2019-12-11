@@ -41,7 +41,10 @@ pub enum Shape {
     /// A switch node with parameters for the switch deviating side (left/right) and direction (Up = switch facing when traveling in increasing mileage direction).
     Switch(Side, Dir), 
     /// A node which simply connects two tracks, included for convencience when translating from railML.
-    Continuation 
+    Continuation ,
+
+    Crossing,
+        
 }
 
 /// Node port.
@@ -58,8 +61,19 @@ pub enum Shape {
 ///                     /---    <- Left port
 ///  Trunk port --> ---O----    <- Right port
 /// ```
+///
+/// For crossings:
+///   
+/// ```text
+///                       /---    <- OutLeft port
+///  InRight port ->  ---O----    <- OutRight port
+///  InLeft port  ->  --/
+/// ```
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum Port { In=0, Out=1, Left=2, Right=3, Trunk=4 }
+pub enum Port { 
+    In=0, Out=1, Left=2, Right=3, Trunk=4,
+    ContA=5, ContB=6,
+    InLeft=7, InRight=8, OutLeft=9, OutRight=10}
 
 
 /// Nodes have a mileage (`pos`), shape and name.
